@@ -25,6 +25,15 @@ import { BrandManagerAgent } from "./agents/brand-manager";
 import { SchedulerAgent } from "./agents/scheduler";
 import { AnalyticsAgent } from "./agents/analytics";
 import { CampaignManagerAgent } from "./agents/campaign-manager";
+import { SEOAgent } from "./agents/seo";
+import { EmailMarketingAgent } from "./agents/email-marketing";
+import { ContentRepurposerAgent } from "./agents/content-repurposer";
+import { SocialMediaManagerAgent } from "./agents/social-media-manager";
+import { SalesAgent } from "./agents/sales";
+import { EcommerceAgent } from "./agents/ecommerce";
+import { BrandDesignAgent } from "./agents/brand-design";
+import { DataAnalystAgent } from "./agents/data-analyst";
+import { DevOpsAgent } from "./agents/devops";
 import type { SearchConfig } from "./agents/researcher/tools/web-search";
 
 const ROOT = import.meta.dir || __dirname;
@@ -88,6 +97,17 @@ if (config.features.scheduling) {
 }
 
 if (config.features.analytics) bus.register(new AnalyticsAgent(memory));
+
+// Additional agents
+if (config.features.seoTools) bus.register(new SEOAgent(llm, memory, searchConfig));
+bus.register(new EmailMarketingAgent(llm, memory));
+bus.register(new ContentRepurposerAgent(llm));
+bus.register(new SocialMediaManagerAgent(llm, memory, searchConfig));
+bus.register(new SalesAgent(llm, memory, searchConfig));
+bus.register(new EcommerceAgent(llm, searchConfig));
+bus.register(new BrandDesignAgent(llm, memory, searchConfig));
+bus.register(new DataAnalystAgent(llm));
+bus.register(new DevOpsAgent(llm));
 
 let campaignManager: CampaignManagerAgent | undefined;
 if (config.features.campaigns) {
@@ -162,6 +182,15 @@ app.post("/api/v1/run", authMiddleware, async (c) => {
       await cm.init();
       requestBus.register(cm);
     }
+    if (config.features.seoTools) requestBus.register(new SEOAgent(userLLM, reqMemory, userSearchConfig));
+    requestBus.register(new EmailMarketingAgent(userLLM, reqMemory));
+    requestBus.register(new ContentRepurposerAgent(userLLM));
+    requestBus.register(new SocialMediaManagerAgent(userLLM, reqMemory, userSearchConfig));
+    requestBus.register(new SalesAgent(userLLM, reqMemory, userSearchConfig));
+    requestBus.register(new EcommerceAgent(userLLM, userSearchConfig));
+    requestBus.register(new BrandDesignAgent(userLLM, reqMemory, userSearchConfig));
+    requestBus.register(new DataAnalystAgent(userLLM));
+    requestBus.register(new DevOpsAgent(userLLM));
   }
 
   const msg = createMessage("api", "orchestrator", "task", {

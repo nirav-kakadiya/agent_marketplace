@@ -19,6 +19,15 @@ import { BrandManagerAgent } from "./agents/brand-manager";
 import { SchedulerAgent } from "./agents/scheduler";
 import { AnalyticsAgent } from "./agents/analytics";
 import { CampaignManagerAgent } from "./agents/campaign-manager";
+import { SEOAgent } from "./agents/seo";
+import { EmailMarketingAgent } from "./agents/email-marketing";
+import { ContentRepurposerAgent } from "./agents/content-repurposer";
+import { SocialMediaManagerAgent } from "./agents/social-media-manager";
+import { SalesAgent } from "./agents/sales";
+import { EcommerceAgent } from "./agents/ecommerce";
+import { BrandDesignAgent } from "./agents/brand-design";
+import { DataAnalystAgent } from "./agents/data-analyst";
+import { DevOpsAgent } from "./agents/devops";
 
 const ROOT = import.meta.dir || __dirname;
 
@@ -98,6 +107,20 @@ async function main() {
     await campaignManager.init();
     bus.register(campaignManager);
   }
+
+  // --- Additional agents ---
+  if (config.features.seoTools) {
+    bus.register(new SEOAgent(llm, memory, searchConfig));
+  }
+
+  bus.register(new EmailMarketingAgent(llm, memory));
+  bus.register(new ContentRepurposerAgent(llm));
+  bus.register(new SocialMediaManagerAgent(llm, memory, searchConfig));
+  bus.register(new SalesAgent(llm, memory, searchConfig));
+  bus.register(new EcommerceAgent(llm, searchConfig));
+  bus.register(new BrandDesignAgent(llm, memory, searchConfig));
+  bus.register(new DataAnalystAgent(llm));
+  bus.register(new DevOpsAgent(llm));
 
   console.log(`\n✅ ${bus.listAgentNames().length} agents ready: ${bus.listAgentNames().join(", ")}\n`);
 
