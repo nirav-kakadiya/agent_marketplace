@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent Marketplace — Autonomous AI Marketing Agents</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/landing.css">
+  <link rel="icon" href="assets/logo.svg">
+</head>
+<body>
+  <nav class="top-nav">
+    <a href="/" class="nav-logo"><img src="assets/logo.svg" alt="">Agent Marketplace</a>
+    <div class="nav-links">
+      <a href="docs.html" class="nav-link">Docs</a>
+      <a href="setup.html" class="nav-link">Setup</a>
+      <a href="dashboard.html" class="nav-link">Dashboard</a>
+    </div>
+  </nav>
+
+  <main class="container">
+    <!-- Hero -->
+    <section class="hero">
+      <div class="hero-badge"><span>NEW</span> 19 autonomous agents available</div>
+      <h1>Ship marketing<br>on autopilot</h1>
+      <p>A fleet of specialized AI agents that research, write, edit, publish, and optimize your content pipeline. No babysitting required.</p>
+      <div class="hero-actions">
+        <a href="setup.html" class="btn btn-primary btn-lg">Get started</a>
+        <a href="docs.html" class="btn btn-lg">Read docs →</a>
+      </div>
+      <div class="hero-terminal">
+        <div class="hero-terminal-bar"><i></i><i></i><i></i></div>
+        <pre><span class="cmd">$ curl -X POST /api/v1/run \</span>
+<span class="cmd">    -H "Authorization: Bearer sk_..." \</span>
+<span class="cmd">    -d '{"agent":"writer","task":"blog post about AI trends"}'</span>
+
+<span class="out">{"status":"complete","output":"# The State of AI in 2025..."}</span></pre>
+      </div>
+    </section>
+
+    <!-- Agents -->
+    <section class="agents-section">
+      <div class="section-label">Agents</div>
+      <h2 class="section-title">19 specialized agents</h2>
+      <p class="section-desc">Each agent has a distinct role, capabilities, and can collaborate through the orchestrator.</p>
+      <div class="agents-grid" id="agentsGrid"></div>
+    </section>
+
+    <!-- How it works -->
+    <section class="how-section">
+      <div class="section-label">How it works</div>
+      <h2 class="section-title">Three steps to production</h2>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <h3>Install & configure</h3>
+          <p>Clone the repo, set your LLM API key, and optionally connect integrations like WordPress or Twitter.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <h3>Create a campaign</h3>
+          <p>Define your content strategy, target audience, and publishing schedule. The campaign manager handles the rest.</p>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <h3>Agents execute</h3>
+          <p>Agents research topics, write drafts, edit for quality, optimize SEO, and publish — all autonomously.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pricing -->
+    <section class="pricing-section">
+      <div class="section-label">Pricing</div>
+      <h2 class="section-title">Simple, transparent pricing</h2>
+      <p class="section-desc">Start free. Scale when you're ready.</p>
+      <div class="pricing-grid">
+        <div class="price-card">
+          <div class="price-name">Free</div>
+          <div class="price-amount">$0<span>/mo</span></div>
+          <div class="price-desc">For experimentation</div>
+          <ul class="price-features">
+            <li>5 generations/day</li>
+            <li>3 agents</li>
+            <li>API access</li>
+            <li>Community support</li>
+          </ul>
+          <a href="setup.html" class="btn" style="width:100%;justify-content:center;">Get started</a>
+        </div>
+        <div class="price-card">
+          <div class="price-name">Starter</div>
+          <div class="price-amount">$19<span>/mo</span></div>
+          <div class="price-desc">For small teams</div>
+          <ul class="price-features">
+            <li>100 generations/day</li>
+            <li>All 19 agents</li>
+            <li>Campaigns</li>
+            <li>Email support</li>
+          </ul>
+          <a href="setup.html" class="btn btn-primary" style="width:100%;justify-content:center;">Get started</a>
+        </div>
+        <div class="price-card featured">
+          <div class="price-name">Pro</div>
+          <div class="price-amount">$99<span>/mo</span></div>
+          <div class="price-desc">For growing businesses</div>
+          <ul class="price-features">
+            <li>Unlimited generations</li>
+            <li>All 19 agents</li>
+            <li>Webhooks & integrations</li>
+            <li>Priority support</li>
+            <li>Analytics dashboard</li>
+          </ul>
+          <a href="setup.html" class="btn btn-primary" style="width:100%;justify-content:center;">Get started</a>
+        </div>
+        <div class="price-card">
+          <div class="price-name">Enterprise</div>
+          <div class="price-amount">Custom</div>
+          <div class="price-desc">For organizations</div>
+          <ul class="price-features">
+            <li>Custom limits</li>
+            <li>Multi-tenant</li>
+            <li>SSO & RBAC</li>
+            <li>Dedicated support</li>
+            <li>SLA guarantee</li>
+          </ul>
+          <a href="mailto:hello@agentmarketplace.dev" class="btn" style="width:100%;justify-content:center;">Contact us</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="container">
+    <div class="landing-footer">
+      <span>© 2025 Agent Marketplace</span>
+      <div class="flex gap-4">
+        <a href="docs.html">Docs</a>
+        <a href="https://github.com/nirav-kakadiya/agent_marketplace">GitHub</a>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/app.js"></script>
+  <script>
+    const agents = [
+      { name: 'orchestrator', desc: 'Coordinates multi-agent workflows', caps: 8 },
+      { name: 'researcher', desc: 'Deep web & topic research', caps: 6 },
+      { name: 'writer', desc: 'Long-form content generation', caps: 7 },
+      { name: 'editor', desc: 'Grammar, style & fact checking', caps: 5 },
+      { name: 'publisher', desc: 'Multi-platform publishing', caps: 4 },
+      { name: 'social-writer', desc: 'Social media content', caps: 6 },
+      { name: 'brand-manager', desc: 'Brand voice & guidelines', caps: 5 },
+      { name: 'scheduler', desc: 'Content calendar management', caps: 4 },
+      { name: 'analytics', desc: 'Performance tracking', caps: 6 },
+      { name: 'campaign-manager', desc: 'End-to-end campaigns', caps: 7 },
+      { name: 'content-repurposer', desc: 'Format & platform adaptation', caps: 5 },
+      { name: 'data-analyst', desc: 'Data insights & reporting', caps: 6 },
+      { name: 'devops', desc: 'Infrastructure & deployment', caps: 4 },
+      { name: 'ecommerce', desc: 'Product & store content', caps: 5 },
+      { name: 'email-marketing', desc: 'Email campaigns & sequences', caps: 6 },
+      { name: 'seo', desc: 'SEO optimization & keywords', caps: 7 },
+      { name: 'social-media-manager', desc: 'Social strategy & posting', caps: 5 },
+      { name: 'brand-design', desc: 'Visual brand assets', caps: 4 },
+      { name: 'sales', desc: 'Sales copy & outreach', caps: 5 },
+    ];
+    
+    const grid = document.getElementById('agentsGrid');
+    agents.forEach(a => {
+      grid.innerHTML += `
+        <div class="agent-card-sm">
+          <div class="icon">${agentIcon(a.name)}</div>
+          <h4>${a.name.replace(/-/g, ' ')}</h4>
+          <p>${a.desc} · <span class="font-mono">${a.caps} capabilities</span></p>
+        </div>`;
+    });
+  </script>
+</body>
+</html>

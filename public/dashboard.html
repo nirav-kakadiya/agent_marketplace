@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — Agent Marketplace</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+  <link rel="icon" href="assets/logo.svg">
+</head>
+<body>
+  <nav class="top-nav">
+    <a href="/" class="nav-logo"><img src="assets/logo.svg" alt="">Agent Marketplace</a>
+    <div class="nav-links">
+      <a href="docs.html" class="nav-link">Docs</a>
+      <a href="setup.html" class="nav-link">Setup</a>
+    </div>
+  </nav>
+
+  <div class="dash-layout">
+    <aside class="sidebar">
+      <button class="sidebar-link" data-route="overview" onclick="location.hash='overview'">
+        <svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+        Overview
+      </button>
+      <button class="sidebar-link" data-route="agents" onclick="location.hash='agents'">
+        <svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="5" r="3"/><path d="M2 14c0-3.3 2.7-6 6-6s6 2.7 6 6"/></svg>
+        Agents
+      </button>
+      <button class="sidebar-link" data-route="campaigns" onclick="location.hash='campaigns'">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 3h12v2H2zm0 4h8v2H2zm0 4h10v2H2z"/></svg>
+        Campaigns
+      </button>
+      <button class="sidebar-link" data-route="analytics" onclick="location.hash='analytics'">
+        <svg viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="8" width="3" height="6" rx="0.5"/><rect x="5.5" y="5" width="3" height="9" rx="0.5"/><rect x="10" y="2" width="3" height="12" rx="0.5"/></svg>
+        Analytics
+      </button>
+      <div class="sidebar-divider"></div>
+      <button class="sidebar-link" data-route="settings" onclick="location.hash='settings'">
+        <svg viewBox="0 0 16 16" fill="currentColor"><path d="M8 10a2 2 0 100-4 2 2 0 000 4z"/><path d="M13.5 8c0-.3 0-.6-.1-.9l1.4-1.1-1.5-2.6-1.7.7c-.4-.3-.9-.6-1.4-.7L10 1.5H7l-.3 1.9c-.5.2-1 .4-1.4.7l-1.7-.7L2.1 6l1.4 1.1c-.1.3-.1.6-.1.9s0 .6.1.9L2.1 10l1.5 2.6 1.7-.7c.4.3.9.6 1.4.7l.3 1.9h3l.3-1.9c.5-.2 1-.4 1.4-.7l1.7.7L13.9 10l-1.4-1.1c.1-.3.1-.6.1-.9z"/></svg>
+        Settings
+      </button>
+    </aside>
+
+    <main class="dash-main" id="dashContent"></main>
+  </div>
+
+  <!-- Agent Detail Modal -->
+  <div class="modal-overlay" id="agentModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modalTitle"></h3>
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script src="js/dashboard.js"></script>
+</body>
+</html>

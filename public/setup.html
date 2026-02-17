@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Setup — Agent Marketplace</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="assets/logo.svg">
+  <style>
+    .setup-container { max-width: 640px; margin: 0 auto; padding: 48px 24px; }
+    .progress-bar { height: 3px; background: var(--bg-hover); border-radius: 2px; margin-bottom: 40px; overflow: hidden; }
+    .progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 400ms ease; }
+    .step-card { margin-bottom: 16px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--bg-card); overflow: hidden; transition: all var(--transition); }
+    .step-card.completed { border-color: rgba(34,197,94,0.2); }
+    .step-head { padding: 18px 20px; display: flex; align-items: center; gap: 14px; cursor: pointer; }
+    .step-head:hover { background: var(--bg-hover); }
+    .step-icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; background: var(--bg-hover); color: var(--text-muted); flex-shrink: 0; }
+    .step-card.completed .step-icon { background: rgba(34,197,94,0.12); color: var(--success); }
+    .step-card.active .step-icon { background: var(--accent-glow); color: var(--accent-light); }
+    .step-info { flex: 1; }
+    .step-info h3 { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+    .step-info p { font-size: 12px; color: var(--text-muted); }
+    .step-status { font-size: 12px; font-weight: 500; }
+    .step-body { padding: 0 20px 20px; display: none; }
+    .step-card.active .step-body { display: block; }
+    .key-display { display: flex; gap: 8px; margin: 12px 0; }
+    .key-display input { flex: 1; }
+    .integration-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 12px; }
+    .int-card { padding: 14px; background: var(--bg); border: 1px solid var(--border); border-radius: var(--radius-sm); display: flex; align-items: center; gap: 10px; }
+    .int-card .int-icon { font-size: 18px; }
+    .int-card h4 { font-size: 13px; font-weight: 500; }
+    .int-card p { font-size: 11px; color: var(--text-muted); }
+    .check-link { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <nav class="top-nav">
+    <a href="/" class="nav-logo"><img src="assets/logo.svg" alt="">Agent Marketplace</a>
+    <div class="nav-links">
+      <a href="docs.html" class="nav-link">Docs</a>
+      <a href="dashboard.html" class="nav-link">Dashboard</a>
+    </div>
+  </nav>
+
+  <div class="setup-container">
+    <h1 style="font-size:22px;font-weight:700;margin-bottom:4px;">Setup</h1>
+    <p class="text-sm text-secondary mb-6">Get your marketplace running in 3 steps.</p>
+    
+    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+
+    <div class="step-card active" id="step1">
+      <div class="step-head" onclick="toggleStep(1)">
+        <div class="step-icon">1</div>
+        <div class="step-info">
+          <h3>API Key</h3>
+          <p>Configure your authentication key</p>
+        </div>
+        <span class="step-status" id="step1Status">❌ Not set</span>
+      </div>
+      <div class="step-body">
+        <p class="text-sm text-secondary">Enter your API key to authenticate requests. This is set via the <code>LLM_API_KEY</code> environment variable on the server.</p>
+        <div class="key-display">
+          <input type="password" class="input" id="setupApiKey" placeholder="sk_...">
+          <button class="btn" onclick="document.getElementById('setupApiKey').type=document.getElementById('setupApiKey').type==='password'?'text':'password'">👁</button>
+        </div>
+        <button class="btn btn-primary" onclick="saveApiKey()">Save key</button>
+      </div>
+    </div>
+
+    <div class="step-card" id="step2">
+      <div class="step-head" onclick="toggleStep(2)">
+        <div class="step-icon">2</div>
+        <div class="step-info">
+          <h3>LLM Provider</h3>
+          <p>Connect an AI model provider</p>
+        </div>
+        <span class="step-status" id="step2Status">Checking...</span>
+      </div>
+      <div class="step-body">
+        <p class="text-sm text-secondary">The server needs an LLM API key. Configure one of these providers:</p>
+        <div class="integration-grid">
+          <a href="https://openrouter.ai/keys" target="_blank" class="int-card">
+            <div class="int-icon">🔀</div>
+            <div><h4>OpenRouter</h4><p>Multi-model access</p></div>
+          </a>
+          <a href="https://console.anthropic.com/" target="_blank" class="int-card">
+            <div class="int-icon">🧠</div>
+            <div><h4>Anthropic</h4><p>Claude models</p></div>
+          </a>
+          <a href="https://platform.openai.com/api-keys" target="_blank" class="int-card">
+            <div class="int-icon">⚡</div>
+            <div><h4>OpenAI</h4><p>GPT models</p></div>
+          </a>
+          <a href="https://aistudio.google.com/apikey" target="_blank" class="int-card">
+            <div class="int-icon">🔷</div>
+            <div><h4>Google AI</h4><p>Gemini models</p></div>
+          </a>
+        </div>
+        <a href="docs.html#auth" class="check-link">📖 See configuration guide →</a>
+      </div>
+    </div>
+
+    <div class="step-card" id="step3">
+      <div class="step-head" onclick="toggleStep(3)">
+        <div class="step-icon">3</div>
+        <div class="step-info">
+          <h3>Integrations</h3>
+          <p>Optional: connect external services</p>
+        </div>
+        <span class="step-status" id="step3Status">Optional</span>
+      </div>
+      <div class="step-body">
+        <p class="text-sm text-secondary">These are optional but unlock additional agent capabilities.</p>
+        <div class="integration-grid" id="integrationsGrid"></div>
+      </div>
+    </div>
+
+    <div style="margin-top:32px;text-align:center;">
+      <a href="dashboard.html" class="btn btn-primary btn-lg">Go to dashboard →</a>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script src="js/setup.js"></script>
+</body>
+</html>
