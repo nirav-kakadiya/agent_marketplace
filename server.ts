@@ -21,6 +21,7 @@ import { PublisherAgent } from "./agents/publisher";
 import { SkillBuilderAgent } from "./agents/skill-builder";
 import { SocialWriterAgent } from "./agents/social-writer";
 import { BrandManagerAgent } from "./agents/brand-manager";
+import { SchedulerAgent } from "./agents/scheduler";
 
 const ROOT = import.meta.dir || __dirname;
 
@@ -56,6 +57,7 @@ const publisher = new PublisherAgent(executor, integrationsDir, outputDir);
 const skillBuilder = new SkillBuilderAgent(llm, executor, integrationsDir);
 const socialWriter = new SocialWriterAgent(llm, memory);
 const brandManager = new BrandManagerAgent(llm, memory);
+const scheduler = new SchedulerAgent(memory, join(ROOT, "data"));
 
 await publisher.init();
 
@@ -67,6 +69,33 @@ bus.register(publisher);
 bus.register(skillBuilder);
 bus.register(socialWriter);
 bus.register(brandManager);
+await scheduler.init();
+bus.register(scheduler);
+
+// Start scheduler ticker — auto-generates content when jobs are due
+scheduler.startTicker(async (job) => {
+  console.log(`⏰ Running scheduled job: ${job.name}`);
+  const msg = createMessage("scheduler", "orchestrator", "task", {
+    action: "orchestrate",
+    input: { request: job.request },
+  });
+  const result = await bus.send(msg);
+
+  // Store result in jobs map
+  const jobRecord: Job = {
+    id: `job_${Date.now()}`,
+    status: result.type === "result" ? "done" : "error",
+    request: job.request,
+    type: job.type,
+    createdAt: new Date().toISOString(),
+    completedAt: new Date().toISOString(),
+    result: result.payload?.output,
+    error: result.type === "error" ? result.payload?.message : undefined,
+    steps: [],
+  };
+  jobs.set(jobRecord.id, jobRecord);
+  console.log(`⏰ Scheduled job complete: ${job.name} → ${jobRecord.status}`);
+});
 
 // Load credentials
 for (const [key, value] of Object.entries(process.env)) {
@@ -242,6 +271,49 @@ app.post("/api/integrations/build", async (c) => {
   await publisher.reload();
 
   return c.json(result.payload);
+});
+
+// Scheduler
+app.get("/api/schedules", async (c) => {
+  const msg = createMessage("api", "scheduler", "task", { action: "list-schedules", input: {} });
+  const result = await bus.send(msg);
+  return c.json(result.payload?.output || { jobs: [] });
+});
+
+app.post("/api/schedules", async (c) => {
+  const body = await c.req.json();
+  const msg = createMessage("api", "scheduler", "task", { action: "create-schedule", input: body });
+  const result = await bus.send(msg);
+  return c.json(result.payload?.output || {});
+});
+
+app.put("/api/schedules/:id", async (c) => {
+  const body = await c.req.json();
+  const msg = createMessage("api", "scheduler", "task", {
+    action: "update-schedule",
+    input: { id: c.req.param("id"), ...body },
+  });
+  const result = await bus.send(msg);
+  return c.json(result.payload?.output || {});
+});
+
+app.delete("/api/schedules/:id", async (c) => {
+  const msg = createMessage("api", "scheduler", "task", {
+    action: "delete-schedule",
+    input: { id: c.req.param("id") },
+  });
+  const result = await bus.send(msg);
+  return c.json(result.payload?.output || {});
+});
+
+app.get("/api/calendar", async (c) => {
+  const days = parseInt(c.req.query("days") || "14");
+  const msg = createMessage("api", "scheduler", "task", {
+    action: "get-calendar",
+    input: { days },
+  });
+  const result = await bus.send(msg);
+  return c.json(result.payload?.output || { calendar: [] });
 });
 
 // Brand management
