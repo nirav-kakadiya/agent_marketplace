@@ -13,6 +13,7 @@ import { createMessage } from "./core/message";
 import { TenantManager } from "./core/tenant";
 import { Auth } from "./core/auth";
 import { loadConfig, resolveKeys, printConfig } from "./core/config";
+import { checkSetup, formatSetupStatus, canAgentWork } from "./core/setup";
 import type { SearchConfig } from "./agents/researcher/tools/web-search";
 
 import { OrchestratorAgent } from "./agents/orchestrator";
@@ -147,6 +148,18 @@ const authMiddleware = async (c: any, next: any) => {
 app.post("/api/v1/run", authMiddleware, async (c) => {
   const body = await c.req.json();
 
+  // Check setup first — guide user if not configured
+  const setupResult = checkSetup(config);
+  if (!setupResult.ready && !body.userKeys?.llmApiKey) {
+    return c.json({
+      success: false,
+      setup_required: true,
+      message: setupResult.message,
+      formatted: formatSetupStatus(setupResult),
+      missing: setupResult.missing.map(m => ({ name: m.name, envVar: m.envVar, howToGet: m.howToGet })),
+    }, 428); // 428 = Precondition Required
+  }
+
   // Hybrid: if user sends their own keys, use them for this request
   // In "saas" mode, always use server keys (ignore user keys)
   // In "free" or "hybrid", prefer user keys
@@ -199,6 +212,23 @@ app.post("/api/v1/run", authMiddleware, async (c) => {
   });
   const result = await requestBus.send(msg);
   return c.json(result.payload, result.type === "error" ? 400 : 200);
+});
+
+// === Setup Check (first thing OpenClaw calls) ===
+app.get("/api/v1/setup", (c) => {
+  const result = checkSetup(config);
+  return c.json(result);
+});
+
+app.get("/api/v1/setup/formatted", (c) => {
+  const result = checkSetup(config);
+  return c.json({ message: formatSetupStatus(result), ready: result.ready });
+});
+
+// Check if specific agent can work
+app.get("/api/v1/setup/agent/:name", (c) => {
+  const result = canAgentWork(c.req.param("name"), config);
+  return c.json(result);
 });
 
 // === Health ===

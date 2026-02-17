@@ -7,6 +7,7 @@ import { Memory } from "./core/memory";
 import { LLM } from "./core/llm";
 import { createMessage } from "./core/message";
 import { loadConfig, resolveKeys, printConfig } from "./core/config";
+import { checkSetup, formatSetupStatus } from "./core/setup";
 import type { SearchConfig } from "./agents/researcher/tools/web-search";
 
 import { OrchestratorAgent } from "./agents/orchestrator";
@@ -127,6 +128,12 @@ async function main() {
   // --- CLI ---
   const args = process.argv.slice(2);
 
+  if (args.includes("--setup")) {
+    const setupResult = checkSetup(config);
+    console.log(formatSetupStatus(setupResult));
+    return;
+  }
+
   if (args.includes("--agents")) {
     console.log(bus.describeAll());
     return;
@@ -153,9 +160,10 @@ async function main() {
     console.log("Usage:");
     console.log('  bun run index.ts "Write a blog about AI trends"');
     console.log('  bun run index.ts "Launch my SaaS on Product Hunt"');
-    console.log("  bun run index.ts --agents");
-    console.log("  bun run index.ts --strategies");
-    console.log("  bun run index.ts --config");
+    console.log("  bun run index.ts --setup        Check what's configured");
+    console.log("  bun run index.ts --agents        List all agents");
+    console.log("  bun run index.ts --strategies    List campaign strategies");
+    console.log("  bun run index.ts --config        Show current config");
     return;
   }
 
