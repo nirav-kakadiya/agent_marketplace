@@ -1,0 +1,49 @@
+/* ============================================
+   THEME TOKENS — Edit ONLY this file to reskin
+   ============================================
+   Swap colors, fonts, radii, shadows here.
+   No layout or component code — just design.
+   ============================================ */
+
+:root {
+  /* --- Backgrounds --- */
+  --bg:            #0d0d0d;
+  --bg-card:       #171717;
+  --bg-hover:      #1f1f1f;
+  --bg-elevated:   #222222;
+
+  /* --- Accent (warm amber/orange — NOT generic blue) --- */
+  --accent:        #e5883e;
+  --accent-light:  #f0a664;
+  --accent-glow:   rgba(229, 136, 62, 0.12);
+
+  /* --- Text --- */
+  --text:          #ececec;
+  --text-secondary:#9a9a9a;
+  --text-muted:    #5c5c5c;
+
+  /* --- Status --- */
+  --success:       #34d399;
+  --warning:       #fbbf24;
+  --error:         #f87171;
+
+  /* --- Borders --- */
+  --border:        rgba(255, 255, 255, 0.07);
+  --border-accent: rgba(229, 136, 62, 0.30);
+
+  /* --- Radii --- */
+  --radius:        8px;
+  --radius-sm:     6px;
+  --radius-lg:     12px;
+
+  /* --- Fonts --- */
+  --font:          'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono:     'JetBrains Mono', 'Fira Code', monospace;
+
+  /* --- Shadows --- */
+  --shadow:        0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.25);
+  --shadow-lg:     0 4px 14px rgba(0,0,0,0.5), 0 2px 4px rgba(0,0,0,0.3);
+
+  /* --- Motion --- */
+  --transition:    150ms ease;
+}

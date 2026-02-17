@@ -1,31 +1,7 @@
 /* === Base Styles === */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
-:root {
-  --bg: #0f1117;
-  --bg-card: #161922;
-  --bg-hover: #1c1f2e;
-  --bg-elevated: #1e2130;
-  --accent: #6366f1;
-  --accent-light: #818cf8;
-  --accent-glow: rgba(99,102,241,0.15);
-  --text: #e2e8f0;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
-  --success: #22c55e;
-  --warning: #f59e0b;
-  --error: #ef4444;
-  --border: rgba(255,255,255,0.06);
-  --border-accent: rgba(99,102,241,0.3);
-  --radius: 8px;
-  --radius-sm: 6px;
-  --radius-lg: 12px;
-  --font: 'Inter', system-ui, -apple-system, sans-serif;
-  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
-  --shadow: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
-  --shadow-lg: 0 4px 12px rgba(0,0,0,0.4), 0 2px 4px rgba(0,0,0,0.2);
-  --transition: 150ms ease;
-}
+/* Theme tokens live in theme.css — edit ONLY that file to reskin */
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
