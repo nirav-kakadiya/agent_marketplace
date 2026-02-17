@@ -23,12 +23,13 @@ async function main() {
   console.log("Future-proof architecture with message bus\n");
 
   // --- Config ---
-  const provider = (process.env.LLM_PROVIDER as "openai" | "anthropic") || "anthropic";
-  const apiKey = process.env.LLM_API_KEY || process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY || "";
+  const apiKey = process.env.LLM_API_KEY || process.env.OPENROUTER_API_KEY || process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY || "";
+  const provider = process.env.LLM_PROVIDER || (process.env.OPENROUTER_API_KEY ? "openrouter" : process.env.ANTHROPIC_API_KEY ? "anthropic" : process.env.GEMINI_API_KEY ? "gemini" : "openai");
   const model = process.env.LLM_MODEL || undefined;
+  const baseUrl = process.env.LLM_BASE_URL || undefined;
 
   if (!apiKey) {
-    console.error("❌ Set LLM_API_KEY, ANTHROPIC_API_KEY, or OPENAI_API_KEY");
+    console.error("❌ Set LLM_API_KEY (or OPENROUTER_API_KEY / ANTHROPIC_API_KEY / OPENAI_API_KEY / GEMINI_API_KEY)");
     process.exit(1);
   }
 
@@ -36,7 +37,7 @@ async function main() {
   const integrationsDir = join(ROOT, "integrations");
   const memoryDir = join(ROOT, "memory");
 
-  const llm = new LLM(provider, apiKey, model);
+  const llm = new LLM({ provider, apiKey, model, baseUrl });
   const memory = new Memory(memoryDir);
   const executor = new Executor();
   const bus = new MessageBus();
