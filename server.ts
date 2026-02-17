@@ -25,6 +25,7 @@ import { BrandManagerAgent } from "./agents/brand-manager";
 import { SchedulerAgent } from "./agents/scheduler";
 import { AnalyticsAgent } from "./agents/analytics";
 import { CampaignManagerAgent } from "./agents/campaign-manager";
+import type { SearchConfig } from "./agents/researcher/tools/web-search";
 
 const ROOT = import.meta.dir || __dirname;
 
@@ -127,17 +128,47 @@ app.post("/api/v1/run", authMiddleware, async (c) => {
   const body = await c.req.json();
 
   // Hybrid: if user sends their own keys, use them for this request
-  // (This is how OpenClaw passes user's configured keys)
-  if (body.userKeys && config.billing !== "saas") {
-    // TODO: Create per-request LLM with user's keys
-    // For now, use the resolved keys
+  // In "saas" mode, always use server keys (ignore user keys)
+  // In "free" or "hybrid", prefer user keys
+  let requestBus = bus;
+
+  if (body.userKeys?.llmApiKey && config.billing !== "saas") {
+    // Create a per-request agent pipeline with the user's keys
+    const userLLM = new LLM({
+      provider: body.userKeys.llmProvider || keys.llmProvider,
+      apiKey: body.userKeys.llmApiKey,
+      model: body.userKeys.llmModel || keys.llmModel,
+    });
+    const userSearchConfig: SearchConfig = {
+      provider: (body.userKeys.searchProvider || keys.searchProvider) as any,
+      apiKey: body.userKeys.searchApiKey || keys.searchApiKey,
+    };
+
+    // Build a temporary bus with user's keys
+    requestBus = new MessageBus();
+    const reqMemory = new Memory(join(ROOT, "memory"));
+    await reqMemory.init();
+
+    requestBus.register(new OrchestratorAgent(userLLM, requestBus, reqMemory));
+    requestBus.register(new ResearcherAgent(userLLM, userSearchConfig));
+    requestBus.register(new WriterAgent(userLLM, reqMemory, userSearchConfig));
+    requestBus.register(new EditorAgent(userLLM));
+    requestBus.register(publisher); // reuse publisher (uses platform creds, not LLM)
+    if (config.features.socialWriter) requestBus.register(new SocialWriterAgent(userLLM, reqMemory));
+    if (config.features.brandManager) requestBus.register(new BrandManagerAgent(userLLM, reqMemory));
+    if (config.features.analytics) requestBus.register(new AnalyticsAgent(reqMemory));
+    if (config.features.campaigns) {
+      const cm = new CampaignManagerAgent(userLLM, requestBus, reqMemory, join(ROOT, "data", "campaigns"));
+      await cm.init();
+      requestBus.register(cm);
+    }
   }
 
   const msg = createMessage("api", "orchestrator", "task", {
     action: "orchestrate",
-    input: body,
+    input: { request: body.request || body.topic, ...body },
   });
-  const result = await bus.send(msg);
+  const result = await requestBus.send(msg);
   return c.json(result.payload, result.type === "error" ? 400 : 200);
 });
 
