@@ -1,0 +1,20 @@
+{
+  "billing": "hybrid",
+  "execution": "both",
+
+  "features": {
+    "campaigns": true,
+    "seoTools": true,
+    "socialWriter": true,
+    "publishing": true,
+    "analytics": true,
+    "scheduling": true,
+    "brandManager": true
+  },
+
+  "limits": {
+    "maxCampaignsPerMonth": -1,
+    "maxGenerationsPerDay": -1,
+    "maxTokensPerMonth": -1
+  }
+}
