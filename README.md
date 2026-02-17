@@ -35,12 +35,46 @@ SEARCH_PROVIDER=brave
 ```
 
 ### 3. Use it
-Just talk to your OpenClaw bot:
+Just talk to your OpenClaw bot — it auto-routes to the right agent:
+
+**Marketing & Content**
 ```
 "Write a blog post about AI trends in 2026"
 "Launch my product on Product Hunt"
-"Create a content marketing campaign for my startup"
-"Research competitors in the project management space"
+"Create a 30-day content calendar for my SaaS"
+"Turn this blog post into a Twitter thread and LinkedIn post"
+```
+
+**SEO**
+```
+"Audit my website's SEO: https://example.com"
+"Find keywords I should target for my AI tool"
+"Check my rankings for these keywords"
+"Create a 3-month SEO roadmap"
+```
+
+**Email & Sales**
+```
+"Create a 5-email welcome sequence for new signups"
+"Find 20 leads in the fintech space"
+"Write a cold outreach email for my product"
+"Prepare a briefing for my meeting with Acme Corp"
+```
+
+**E-commerce & Brand**
+```
+"Write product descriptions for my 10 products"
+"Analyze competitor pricing for wireless earbuds"
+"Create brand guidelines for my startup"
+"Generate 10 tagline ideas for my new app"
+```
+
+**Data & DevOps**
+```
+"Analyze this CSV and find trends"
+"Generate a performance report from this data"
+"Analyze these server logs for errors"
+"Create a deployment checklist for our API"
 ```
 
 OpenClaw automatically routes your request to the right agent. That's it.
@@ -80,19 +114,31 @@ OpenClaw automatically routes your request to the right agent. That's it.
 └──────────────────────────────────────────────┘
 ```
 
-## 📦 Available Agents
+## 📦 Available Agents (19 Agents, 70+ Capabilities)
 
-| Agent | Status | Description |
-|---|---|---|
-| 🎯 Marketing Agent | ✅ Live | Campaigns, content, social media, SEO writing |
-| 📈 SEO Agent | 📋 Coming | Site audits, keyword research, rank tracking |
-| 📧 Email Marketing | 📋 Coming | Sequences, newsletters, drip campaigns |
-| 📝 Content Repurposer | 📋 Coming | One content → 10 formats |
-| 📱 Social Media Manager | 📋 Coming | Content calendar, scheduling, engagement |
-| 🤝 Sales Agent | 📋 Coming | Lead gen, outreach, follow-ups |
-| 🛒 E-commerce Agent | 📋 Coming | Product listings, pricing analysis |
+| # | Agent | Capabilities | Description |
+|---|---|---|---|
+| 1 | 🎯 **Orchestrator** | 1 | Routes tasks to the right agent automatically |
+| 2 | 🔍 **Researcher** | 4 | Real web search, scraping, competitor analysis, trends |
+| 3 | ✍️ **Writer** | 4 | SEO blogs, keyword research, SERP analysis, outlines |
+| 4 | ✏️ **Editor** | 2 | Quality review, SEO optimization |
+| 5 | 📤 **Publisher** | 2 | WordPress, Twitter, LinkedIn, Medium, Dev.to |
+| 6 | 📱 **Social Writer** | 2 | Blog → platform-specific social posts |
+| 7 | 🏷️ **Brand Manager** | 3 | Voice consistency, learning from feedback |
+| 8 | 📅 **Scheduler** | 3 | Recurring content jobs |
+| 9 | 📊 **Analytics** | 2 | Performance tracking & reporting |
+| 10 | 🎯 **Campaign Manager** | 6 | Multi-step autonomous campaigns |
+| 11 | 📈 **SEO Agent** | 6 | Site audits, keywords, backlinks, rank tracking, roadmaps |
+| 12 | 📧 **Email Marketing** | 5 | Sequences, newsletters, drips, A/B, cold emails |
+| 13 | 📝 **Content Repurposer** | 8 | Blog → thread, LinkedIn, YouTube, carousel, email, eBook |
+| 14 | 📱 **Social Media Manager** | 6 | Content calendar, daily posts, trends, hashtags |
+| 15 | 🤝 **Sales Agent** | 6 | Lead gen, outreach, follow-ups, meeting prep |
+| 16 | 🛒 **E-commerce Agent** | 6 | Product descriptions, pricing, listings, reviews |
+| 17 | 🎨 **Brand & Design** | 6 | Guidelines, voice, taglines, positioning, naming |
+| 18 | 📊 **Data Analyst** | 6 | Data analysis, reports, anomalies, forecasting |
+| 19 | 🔧 **DevOps Agent** | 6 | Log analysis, post-mortems, deploys, monitoring |
 
-See [AGENT_CATALOG.md](AGENT_CATALOG.md) for the full roadmap (15 agents planned).
+See [AGENT_CATALOG.md](AGENT_CATALOG.md) for detailed use cases and roadmap.
 
 ---
 
