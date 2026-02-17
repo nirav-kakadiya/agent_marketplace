@@ -6,607 +6,476 @@
   <title>ARISE — AI Content Pipeline</title>
   <style>
     :root {
-      --bg: #0a0a0f;
-      --surface: #12121a;
-      --surface2: #1a1a2e;
-      --border: #2a2a3e;
-      --text: #e4e4ed;
-      --text-dim: #8888a0;
-      --accent: #6c5ce7;
-      --accent2: #a29bfe;
-      --success: #00b894;
-      --error: #ff6b6b;
-      --warning: #fdcb6e;
+      --bg: #0a0a0f; --surface: #12121a; --surface2: #1a1a2e; --border: #2a2a3e;
+      --text: #e4e4ed; --text-dim: #8888a0; --accent: #6c5ce7; --accent2: #a29bfe;
+      --success: #00b894; --error: #ff6b6b; --warning: #fdcb6e;
     }
-
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
 
-    body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-    }
-
-    /* Header */
-    header {
-      background: var(--surface);
-      border-bottom: 1px solid var(--border);
-      padding: 16px 32px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-    }
-
-    .logo {
-      font-size: 24px;
-      font-weight: 800;
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    .logo span { font-weight: 400; opacity: 0.7; font-size: 14px; margin-left: 8px; }
-
-    .status-badge {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-size: 13px;
-      color: var(--text-dim);
-    }
-
-    .status-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: var(--success);
-      animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
-    }
+    /* Nav */
+    nav { background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
+    .logo { font-size: 22px; font-weight: 800; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .nav-links { display: flex; gap: 4px; }
+    .nav-btn { padding: 8px 16px; background: none; border: 1px solid transparent; border-radius: 8px; color: var(--text-dim); font-size: 13px; cursor: pointer; transition: all 0.2s; }
+    .nav-btn:hover, .nav-btn.active { border-color: var(--border); color: var(--text); background: var(--surface2); }
+    .status-badge { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-dim); }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:0.4 } }
 
     /* Layout */
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 32px;
-    }
+    .container { max-width: 1100px; margin: 0 auto; padding: 24px; }
+    .page { display: none; }
+    .page.active { display: block; }
 
-    /* Generate Section */
-    .generate-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 32px;
-      margin-bottom: 32px;
-    }
+    /* Cards */
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 24px; margin-bottom: 16px; }
+    .card h2 { font-size: 18px; margin-bottom: 16px; }
 
-    .generate-card h2 {
-      font-size: 20px;
-      margin-bottom: 20px;
-    }
+    /* Inputs */
+    input, select, textarea { padding: 12px 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-size: 14px; outline: none; width: 100%; transition: border 0.2s; font-family: inherit; }
+    input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+    input::placeholder, textarea::placeholder { color: var(--text-dim); }
+    label { font-size: 13px; color: var(--text-dim); margin-bottom: 6px; display: block; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    .form-group { margin-bottom: 12px; }
 
-    .input-group {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 16px;
-    }
+    /* Buttons */
+    .btn { padding: 12px 24px; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+    .btn-primary { background: linear-gradient(135deg, var(--accent), #8b5cf6); color: white; }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(108,92,231,0.3); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-secondary { background: var(--surface2); border: 1px solid var(--border); color: var(--text); }
+    .btn-secondary:hover { border-color: var(--accent); }
+    .btn-sm { padding: 6px 14px; font-size: 12px; }
+    .btn-danger { background: rgba(255,107,107,0.15); color: var(--error); border: 1px solid transparent; }
+    .btn-danger:hover { border-color: var(--error); }
 
-    .input-group input {
-      flex: 1;
-      padding: 14px 18px;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      color: var(--text);
-      font-size: 15px;
-      outline: none;
-      transition: border-color 0.2s;
-    }
+    /* Type selector */
+    .type-pills { display: flex; gap: 6px; margin-bottom: 16px; }
+    .pill { padding: 8px 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; color: var(--text-dim); font-size: 13px; cursor: pointer; transition: all 0.2s; }
+    .pill.active { background: var(--accent); border-color: var(--accent); color: white; }
 
-    .input-group input:focus {
-      border-color: var(--accent);
-    }
+    /* Generate input */
+    .gen-input { display: flex; gap: 10px; }
+    .gen-input input { flex: 1; }
 
-    .input-group input::placeholder {
-      color: var(--text-dim);
-    }
+    /* Tenant selector */
+    .tenant-bar { display: flex; gap: 8px; margin-bottom: 16px; align-items: center; flex-wrap: wrap; }
+    .tenant-chip { padding: 6px 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; font-size: 12px; color: var(--text-dim); cursor: pointer; transition: all 0.2s; }
+    .tenant-chip.active { border-color: var(--accent); color: var(--accent); background: rgba(108,92,231,0.1); }
+    .tenant-chip:hover { border-color: var(--accent); }
 
-    .type-selector {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 16px;
-    }
+    /* Job cards */
+    .job { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 20px; margin-bottom: 12px; }
+    .job.running { border-color: var(--warning); }
+    .job.done { border-color: var(--success); }
+    .job.error { border-color: var(--error); }
+    .job-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .job-title { font-weight: 600; font-size: 14px; }
+    .badge { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+    .badge.running { background: rgba(253,203,110,0.15); color: var(--warning); }
+    .badge.done { background: rgba(0,184,148,0.15); color: var(--success); }
+    .badge.error { background: rgba(255,107,107,0.15); color: var(--error); }
 
-    .type-btn {
-      padding: 8px 16px;
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text-dim);
-      font-size: 13px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
+    /* Results grid */
+    .results-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+    @media (max-width: 768px) { .results-grid { grid-template-columns: 1fr; } .form-row { grid-template-columns: 1fr; } }
+    .result-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+    .result-card h4 { font-size: 13px; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+    .result-text { font-size: 12px; line-height: 1.6; color: var(--text-dim); max-height: 250px; overflow-y: auto; white-space: pre-wrap; word-break: break-word; }
+    .result-text::-webkit-scrollbar { width: 3px; }
+    .result-text::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
-    .type-btn.active {
-      background: var(--accent);
-      border-color: var(--accent);
-      color: white;
-    }
+    /* Blog preview */
+    .blog-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 20px; margin-top: 12px; max-height: 400px; overflow-y: auto; font-size: 13px; line-height: 1.7; }
+    .blog-box h1,.blog-box h2,.blog-box h3 { color: var(--text); margin: 12px 0 6px; }
+    .blog-box h1 { font-size: 20px; } .blog-box h2 { font-size: 16px; } .blog-box p { color: var(--text-dim); margin-bottom: 10px; }
 
-    .type-btn:hover:not(.active) {
-      border-color: var(--accent);
-      color: var(--text);
-    }
+    /* Agents */
+    .agents-row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px; }
+    .agent-tag { padding: 5px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; font-size: 11px; color: var(--text-dim); display: flex; align-items: center; gap: 5px; }
+    .agent-tag .d { width: 5px; height: 5px; border-radius: 50%; background: var(--success); }
 
-    .btn-generate {
-      padding: 14px 32px;
-      background: linear-gradient(135deg, var(--accent), #8b5cf6);
-      border: none;
-      border-radius: 12px;
-      color: white;
-      font-size: 15px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: transform 0.1s, opacity 0.2s;
-    }
+    /* Schedule table */
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { text-align: left; padding: 10px 12px; color: var(--text-dim); border-bottom: 1px solid var(--border); font-weight: 500; }
+    td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
 
-    .btn-generate:hover { transform: translateY(-1px); }
-    .btn-generate:active { transform: translateY(0); }
-    .btn-generate:disabled { opacity: 0.5; cursor: not-allowed; }
-
-    /* Job Progress */
-    .job-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 24px;
-      margin-bottom: 16px;
-      transition: border-color 0.3s;
-    }
-
-    .job-card.running { border-color: var(--warning); }
-    .job-card.done { border-color: var(--success); }
-    .job-card.error { border-color: var(--error); }
-
-    .job-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-    }
-
-    .job-title { font-weight: 600; font-size: 15px; }
-
-    .job-status {
-      padding: 4px 12px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 600;
-      text-transform: uppercase;
-    }
-
-    .job-status.running { background: rgba(253, 203, 110, 0.15); color: var(--warning); }
-    .job-status.done { background: rgba(0, 184, 148, 0.15); color: var(--success); }
-    .job-status.error { background: rgba(255, 107, 107, 0.15); color: var(--error); }
-
-    .job-time { font-size: 12px; color: var(--text-dim); }
-
-    /* Results */
-    .results-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 16px;
-      margin-top: 16px;
-    }
-
-    @media (max-width: 768px) {
-      .results-grid { grid-template-columns: 1fr; }
-    }
-
-    .result-card {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 20px;
-    }
-
-    .result-card h3 {
-      font-size: 14px;
-      margin-bottom: 12px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .result-card .platform-icon {
-      font-size: 18px;
-    }
-
-    .result-content {
-      font-size: 13px;
-      line-height: 1.6;
-      color: var(--text-dim);
-      max-height: 300px;
-      overflow-y: auto;
-      white-space: pre-wrap;
-      word-break: break-word;
-    }
-
-    .result-content::-webkit-scrollbar { width: 4px; }
-    .result-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-
-    .btn-copy {
-      margin-top: 12px;
-      padding: 6px 14px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text-dim);
-      font-size: 12px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-
-    .btn-copy:hover { border-color: var(--accent); color: var(--text); }
-
-    /* Blog Preview */
-    .blog-preview {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 24px;
-      margin-top: 16px;
-      max-height: 500px;
-      overflow-y: auto;
-      font-size: 14px;
-      line-height: 1.8;
-    }
-
-    .blog-preview h1, .blog-preview h2, .blog-preview h3 {
-      color: var(--text);
-      margin: 16px 0 8px;
-    }
-
-    .blog-preview h1 { font-size: 22px; }
-    .blog-preview h2 { font-size: 18px; }
-    .blog-preview p { color: var(--text-dim); margin-bottom: 12px; }
-
-    /* Agents sidebar */
-    .agents-bar {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      margin-bottom: 32px;
-    }
-
-    .agent-chip {
-      padding: 6px 14px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      font-size: 12px;
-      color: var(--text-dim);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .agent-chip .dot {
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: var(--success);
-    }
-
-    /* Loading spinner */
-    .spinner {
-      display: inline-block;
-      width: 16px;
-      height: 16px;
-      border: 2px solid var(--border);
-      border-top-color: var(--accent);
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-      margin-right: 8px;
-    }
-
+    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin-right: 6px; }
     @keyframes spin { to { transform: rotate(360deg); } }
-
-    /* History */
-    .section-title {
-      font-size: 18px;
-      font-weight: 700;
-      margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .empty-state {
-      text-align: center;
-      padding: 48px;
-      color: var(--text-dim);
-    }
-
-    .empty-state .emoji { font-size: 48px; margin-bottom: 12px; }
+    .empty { text-align: center; padding: 40px; color: var(--text-dim); }
+    .empty .icon { font-size: 40px; margin-bottom: 8px; }
+    .tab-content { margin-top: 16px; }
   </style>
 </head>
 <body>
-  <header>
-    <div class="logo">ARISE <span>AI Content Pipeline</span></div>
-    <div class="status-badge">
-      <div class="status-dot"></div>
-      <span id="status-text">Connecting...</span>
+  <nav>
+    <div class="logo">ARISE</div>
+    <div class="nav-links">
+      <button class="nav-btn active" onclick="showPage('generate')">✨ Generate</button>
+      <button class="nav-btn" onclick="showPage('content')">📂 Content</button>
+      <button class="nav-btn" onclick="showPage('schedule')">⏰ Schedule</button>
+      <button class="nav-btn" onclick="showPage('brand')">🎨 Brand</button>
+      <button class="nav-btn" onclick="showPage('tenants')">👥 Tenants</button>
+      <button class="nav-btn" onclick="showPage('settings')">⚙️ Settings</button>
     </div>
-  </header>
+    <div class="status-badge"><div class="status-dot"></div><span id="status-text">...</span></div>
+  </nav>
 
   <div class="container">
-    <!-- Agents -->
-    <div class="agents-bar" id="agents-bar"></div>
+    <!-- GENERATE PAGE -->
+    <div class="page active" id="page-generate">
+      <div class="agents-row" id="agents-bar"></div>
 
-    <!-- Generate -->
-    <div class="generate-card">
-      <h2>🚀 Generate Content</h2>
-      <div class="type-selector">
-        <button class="type-btn active" data-type="blog+social">📝 Blog + Social</button>
-        <button class="type-btn" data-type="blog">📝 Blog Only</button>
-        <button class="type-btn" data-type="social">📱 Social Only</button>
+      <div class="card">
+        <h2>✨ Generate Content</h2>
+        <div class="tenant-bar" id="tenant-bar">
+          <span style="font-size:12px;color:var(--text-dim)">Brand:</span>
+          <div class="tenant-chip active" data-tenant="">Default</div>
+        </div>
+        <div class="type-pills">
+          <div class="pill active" data-type="blog+social">📝 Blog + Social</div>
+          <div class="pill" data-type="blog">📝 Blog Only</div>
+          <div class="pill" data-type="social">📱 Social Only</div>
+        </div>
+        <div class="gen-input">
+          <input type="text" id="topic" placeholder="Enter topic... e.g. 'Why AI agents are the future'" />
+          <button class="btn btn-primary" id="btn-gen" onclick="generate()">Generate ✨</button>
+        </div>
       </div>
-      <div class="input-group">
-        <input type="text" id="topic-input" placeholder="Enter a topic... e.g. 'Why AI agents are the future of startups'" />
-        <button class="btn-generate" id="btn-generate" onclick="generate()">Generate ✨</button>
+
+      <div id="jobs"></div>
+    </div>
+
+    <!-- CONTENT PAGE -->
+    <div class="page" id="page-content">
+      <div class="card">
+        <h2>📂 Generated Content</h2>
+        <div id="content-list"></div>
       </div>
     </div>
 
-    <!-- Active Jobs -->
-    <div id="jobs-container"></div>
+    <!-- SCHEDULE PAGE -->
+    <div class="page" id="page-schedule">
+      <div class="card">
+        <h2>⏰ Content Schedule</h2>
+        <div style="display:flex;gap:8px;margin-bottom:16px;">
+          <button class="btn btn-primary btn-sm" onclick="showScheduleForm()">+ New Schedule</button>
+        </div>
+        <div id="schedule-form" style="display:none;margin-bottom:16px;padding:16px;background:var(--surface2);border-radius:10px;">
+          <div class="form-row">
+            <div class="form-group"><label>Name</label><input id="sched-name" placeholder="Weekly AI Blog" /></div>
+            <div class="form-group"><label>Topic/Request</label><input id="sched-request" placeholder="Write about latest AI trends" /></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Frequency</label>
+              <select id="sched-freq"><option value="daily">Daily</option><option value="weekly" selected>Weekly</option><option value="biweekly">Biweekly</option><option value="monthly">Monthly</option><option value="once">One-time</option></select>
+            </div>
+            <div class="form-group"><label>Day</label>
+              <select id="sched-day"><option value="1">Monday</option><option value="2">Tuesday</option><option value="3">Wednesday</option><option value="4">Thursday</option><option value="5">Friday</option><option value="6">Saturday</option><option value="0">Sunday</option></select>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Hour (UTC)</label><input id="sched-hour" type="number" value="9" min="0" max="23" /></div>
+            <div class="form-group"><label>Type</label>
+              <select id="sched-type"><option value="blog+social">Blog + Social</option><option value="blog">Blog Only</option><option value="social">Social Only</option></select>
+            </div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="createSchedule()">Create Schedule</button>
+          <button class="btn btn-secondary btn-sm" onclick="document.getElementById('schedule-form').style.display='none'" style="margin-left:8px">Cancel</button>
+        </div>
+        <table>
+          <thead><tr><th>Name</th><th>Frequency</th><th>Next Run</th><th>Runs</th><th>Status</th><th></th></tr></thead>
+          <tbody id="schedule-table"></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h2>📅 Content Calendar (Next 14 Days)</h2>
+        <div id="calendar"></div>
+      </div>
+    </div>
 
-    <!-- History -->
-    <div class="section-title">📂 Generated Content</div>
-    <div id="history-container">
-      <div class="empty-state">
-        <div class="emoji">✨</div>
-        <p>No content generated yet. Start by entering a topic above!</p>
+    <!-- BRAND PAGE -->
+    <div class="page" id="page-brand">
+      <div class="card">
+        <h2>🎨 Brand Voice</h2>
+        <div class="form-row">
+          <div class="form-group"><label>Voice</label><input id="brand-voice" placeholder="professional yet approachable" /></div>
+          <div class="form-group"><label>Tone</label><input id="brand-tone" placeholder="authoritative but friendly" /></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Audience</label><input id="brand-audience" placeholder="startup founders, developers" /></div>
+          <div class="form-group"><label>Industry</label><input id="brand-industry" placeholder="technology" /></div>
+        </div>
+        <div class="form-group"><label>Keywords (comma separated)</label><input id="brand-keywords" placeholder="AI, automation, productivity" /></div>
+        <div class="form-group"><label>Words to Avoid (comma separated)</label><input id="brand-avoid" placeholder="synergy, leverage, disrupt" /></div>
+        <button class="btn btn-primary btn-sm" onclick="saveBrand()">Save Brand</button>
+        <button class="btn btn-secondary btn-sm" style="margin-left:8px" onclick="loadBrand()">Reset</button>
+      </div>
+      <div class="card">
+        <h2>📝 Analyze Existing Content</h2>
+        <div class="form-group"><label>Paste sample content to extract brand voice</label>
+          <textarea id="brand-sample" rows="4" placeholder="Paste your existing blog/content here..."></textarea>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="analyzeBrand()">Analyze Style</button>
+        <div id="brand-analysis" style="margin-top:12px;"></div>
+      </div>
+      <div class="card">
+        <h2>💬 Feedback</h2>
+        <div class="form-group"><label>Tell us what to improve</label>
+          <textarea id="brand-feedback" rows="2" placeholder="Too formal, make it edgier..."></textarea>
+        </div>
+        <button class="btn btn-primary btn-sm" onclick="submitFeedback()">Submit Feedback</button>
+        <div id="feedback-result" style="margin-top:12px;"></div>
+      </div>
+    </div>
+
+    <!-- TENANTS PAGE -->
+    <div class="page" id="page-tenants">
+      <div class="card">
+        <h2>👥 Brands / Tenants</h2>
+        <button class="btn btn-primary btn-sm" onclick="showTenantForm()" style="margin-bottom:16px">+ New Brand</button>
+        <div id="tenant-form" style="display:none;margin-bottom:16px;padding:16px;background:var(--surface2);border-radius:10px;">
+          <div class="form-row">
+            <div class="form-group"><label>Brand Name</label><input id="t-name" placeholder="Acme Corp" /></div>
+            <div class="form-group"><label>Industry</label><input id="t-industry" placeholder="SaaS" /></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label>Voice</label><input id="t-voice" placeholder="bold and innovative" /></div>
+            <div class="form-group"><label>Audience</label><input id="t-audience" placeholder="CTOs and tech leads" /></div>
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="createTenant()">Create Brand</button>
+          <button class="btn btn-secondary btn-sm" onclick="document.getElementById('tenant-form').style.display='none'" style="margin-left:8px">Cancel</button>
+        </div>
+        <div id="tenants-list"></div>
+      </div>
+    </div>
+
+    <!-- SETTINGS PAGE -->
+    <div class="page" id="page-settings">
+      <div class="card">
+        <h2>⚙️ System Info</h2>
+        <div id="sys-info"></div>
+      </div>
+      <div class="card">
+        <h2>🔌 Integrations</h2>
+        <div id="integrations-list"></div>
       </div>
     </div>
   </div>
 
-  <script>
-    const API = window.location.origin + '/api';
-    let selectedType = 'blog+social';
-    let activeJobs = new Map();
+<script>
+const API = location.origin + '/api';
+let selectedType = 'blog+social';
+let selectedTenant = '';
+let activeJobs = new Map();
 
-    // Init
-    async function init() {
-      try {
-        const res = await fetch(`${API}/health`);
-        const data = await res.json();
-        document.getElementById('status-text').textContent = 
-          `${data.provider} / ${data.model || 'default'} — ${data.agents.length} agents`;
-        
-        // Load agents
-        const agentsRes = await fetch(`${API}/agents`);
-        const agentsData = await agentsRes.json();
-        const bar = document.getElementById('agents-bar');
-        bar.innerHTML = agentsData.agents.map(a => 
-          `<div class="agent-chip"><div class="dot"></div>${a.name}</div>`
-        ).join('');
+// Init
+async function init() {
+  const h = await (await fetch(`${API}/health`)).json();
+  document.getElementById('status-text').textContent = `${h.provider}/${h.model || 'default'}`;
+  const a = await (await fetch(`${API}/agents`)).json();
+  document.getElementById('agents-bar').innerHTML = a.agents.map(x => `<div class="agent-tag"><div class="d"></div>${x.name}</div>`).join('');
+  loadTenantBar();
+  loadContent();
+  loadSchedules();
+  loadBrand();
+  loadTenants();
+  loadSettings();
+}
 
-        // Load history
-        loadHistory();
-      } catch (e) {
-        document.getElementById('status-text').textContent = '❌ Disconnected';
-      }
-    }
+// Pages
+function showPage(p) {
+  document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
+  document.getElementById('page-' + p).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(x => x.classList.remove('active'));
+  event.target.classList.add('active');
+  if (p === 'content') loadContent();
+  if (p === 'schedule') { loadSchedules(); loadCalendar(); }
+  if (p === 'brand') loadBrand();
+  if (p === 'tenants') loadTenants();
+  if (p === 'settings') loadSettings();
+}
 
-    // Type selector
-    document.querySelectorAll('.type-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        selectedType = btn.dataset.type;
-      });
-    });
+// Pills
+document.querySelectorAll('.pill').forEach(p => p.onclick = () => {
+  document.querySelectorAll('.pill').forEach(x => x.classList.remove('active'));
+  p.classList.add('active');
+  selectedType = p.dataset.type;
+});
 
-    // Enter key
-    document.getElementById('topic-input').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') generate();
-    });
+document.getElementById('topic').onkeydown = e => { if (e.key === 'Enter') generate(); };
 
-    // Generate
-    async function generate() {
-      const input = document.getElementById('topic-input');
-      const topic = input.value.trim();
-      if (!topic) return;
+// Tenant bar
+async function loadTenantBar() {
+  const d = await (await fetch(`${API}/tenants`)).json();
+  const bar = document.getElementById('tenant-bar');
+  bar.innerHTML = `<span style="font-size:12px;color:var(--text-dim)">Brand:</span><div class="tenant-chip ${!selectedTenant?'active':''}" data-tenant="" onclick="selectTenant('')">Default</div>`;
+  (d.tenants||[]).forEach(t => {
+    bar.innerHTML += `<div class="tenant-chip ${selectedTenant===t.id?'active':''}" data-tenant="${t.id}" onclick="selectTenant('${t.id}')">${t.name}</div>`;
+  });
+}
 
-      const btn = document.getElementById('btn-generate');
-      btn.disabled = true;
-      btn.textContent = 'Generating...';
+function selectTenant(id) {
+  selectedTenant = id;
+  document.querySelectorAll('.tenant-chip').forEach(c => c.classList.toggle('active', c.dataset.tenant === id));
+}
 
-      try {
-        const res = await fetch(`${API}/generate`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ topic, type: selectedType }),
-        });
-        const data = await res.json();
+// Generate
+async function generate() {
+  const topic = document.getElementById('topic').value.trim();
+  if (!topic) return;
+  const btn = document.getElementById('btn-gen');
+  btn.disabled = true; btn.textContent = 'Generating...';
 
-        if (data.jobId) {
-          activeJobs.set(data.jobId, { topic, type: selectedType });
-          renderJobs();
-          pollJob(data.jobId);
-          input.value = '';
-        }
-      } catch (e) {
-        alert('Error: ' + e.message);
-      }
+  const url = selectedTenant ? `${API}/tenants/${selectedTenant}/generate` : `${API}/generate`;
+  const r = await (await fetch(url, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({topic,type:selectedType}) })).json();
+  if (r.jobId) { activeJobs.set(r.jobId, {topic}); renderJobs(); pollJob(r.jobId); document.getElementById('topic').value=''; }
+  btn.disabled = false; btn.textContent = 'Generate ✨';
+}
 
-      btn.disabled = false;
-      btn.textContent = 'Generate ✨';
-    }
+async function pollJob(id) {
+  const r = await (await fetch(`${API}/jobs/${id}`)).json();
+  activeJobs.set(id, {...activeJobs.get(id), ...r});
+  renderJobs();
+  if (r.status === 'running') setTimeout(() => pollJob(id), 3000);
+  else loadContent();
+}
 
-    // Poll job
-    async function pollJob(jobId) {
-      const poll = async () => {
-        try {
-          const res = await fetch(`${API}/jobs/${jobId}`);
-          const job = await res.json();
+function renderJobs() {
+  document.getElementById('jobs').innerHTML = Array.from(activeJobs.entries()).reverse().map(([id,j]) => {
+    let body = '';
+    if (j.status === 'done' && j.result) body = renderResult(j.result);
+    else if (j.status === 'error') body = `<div style="color:var(--error);padding:8px">${j.error}</div>`;
+    else body = `<div style="padding:12px;color:var(--text-dim)"><span class="spinner"></span>Working on "${j.topic||j.request||''}"...</div>`;
+    return `<div class="job ${j.status||'running'}"><div class="job-head"><div class="job-title">${j.topic||j.request||id}</div><span class="badge ${j.status||'running'}">${j.status==='done'?'✅ Done':j.status==='error'?'❌ Error':'⏳ Running'}</span></div>${body}</div>`;
+  }).join('');
+}
 
-          if (job.status === 'done' || job.status === 'error') {
-            activeJobs.set(jobId, { ...activeJobs.get(jobId), ...job });
-            renderJobs();
-            loadHistory();
-            return;
-          }
+function renderResult(r) {
+  let h = '';
+  if (r.finalContent && typeof r.finalContent === 'string') {
+    h += `<div class="blog-box">${md(r.finalContent)}</div>`;
+  }
+  const s = r.finalContent;
+  if (s?.twitter || s?.linkedin || s?.instagram || s?.facebook) {
+    h += '<div class="results-grid">';
+    if (s.twitter) h += socialCard('🐦','Twitter', s.twitter.thread?.join('\n\n---\n\n')||'', s.twitter.hashtags);
+    if (s.linkedin) h += socialCard('💼','LinkedIn', s.linkedin.post||'', s.linkedin.hashtags);
+    if (s.instagram) h += socialCard('📸','Instagram', s.instagram.caption||'', s.instagram.hashtags);
+    if (s.facebook) h += socialCard('📘','Facebook', s.facebook.post||'');
+    h += '</div>';
+  }
+  if (r.summary) h += `<div style="margin-top:12px;font-size:11px;color:var(--text-dim)">${r.summary.replace(/\n/g,'<br>')}</div>`;
+  return h;
+}
 
-          activeJobs.set(jobId, { ...activeJobs.get(jobId), ...job });
-          renderJobs();
-          setTimeout(poll, 3000);
-        } catch {
-          setTimeout(poll, 5000);
-        }
-      };
-      poll();
-    }
+function socialCard(icon, name, text, tags) {
+  const t = (text + (tags?.length ? '\n\n'+tags.join(' ') : '')).replace(/</g,'&lt;');
+  return `<div class="result-card"><h4>${icon} ${name}</h4><div class="result-text">${t}</div><button class="btn btn-secondary btn-sm" style="margin-top:8px" onclick="navigator.clipboard.writeText(decodeURIComponent(atob('${btoa(encodeURIComponent(text))}'))); this.textContent='✅ Copied!'; setTimeout(()=>this.textContent='📋 Copy',2000)">📋 Copy</button></div>`;
+}
 
-    // Render jobs
-    function renderJobs() {
-      const container = document.getElementById('jobs-container');
-      const jobsHtml = Array.from(activeJobs.entries()).map(([id, job]) => {
-        const statusClass = job.status || 'running';
-        const statusLabel = job.status === 'done' ? '✅ Complete' : job.status === 'error' ? '❌ Error' : '⏳ Generating...';
-        
-        let resultHtml = '';
-        if (job.status === 'done' && job.result) {
-          resultHtml = renderResult(job.result);
-        } else if (job.status === 'error') {
-          resultHtml = `<div style="color: var(--error); padding: 12px;">${job.error}</div>`;
-        } else {
-          resultHtml = `<div style="padding: 16px; color: var(--text-dim);"><span class="spinner"></span>Agents are working on "${job.topic || job.request}"...</div>`;
-        }
+function md(s) {
+  return s.replace(/^### (.+)$/gm,'<h3>$1</h3>').replace(/^## (.+)$/gm,'<h2>$1</h2>').replace(/^# (.+)$/gm,'<h1>$1</h1>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\*(.+?)\*/g,'<em>$1</em>').replace(/^- (.+)$/gm,'• $1<br>').replace(/\n\n/g,'</p><p>').replace(/\n/g,'<br>');
+}
 
-        return `
-          <div class="job-card ${statusClass}">
-            <div class="job-header">
-              <div class="job-title">${job.topic || job.request || id}</div>
-              <span class="job-status ${statusClass}">${statusLabel}</span>
-            </div>
-            ${job.completedAt ? `<div class="job-time">Completed: ${new Date(job.completedAt).toLocaleString()}</div>` : ''}
-            ${resultHtml}
-          </div>
-        `;
-      }).join('');
+// Content
+async function loadContent() {
+  const d = await (await fetch(`${API}/content`)).json();
+  const el = document.getElementById('content-list');
+  if (!d.content?.length) { el.innerHTML = '<div class="empty"><div class="icon">✨</div>No content yet</div>'; return; }
+  el.innerHTML = d.content.map(c => `<div class="job done" style="cursor:pointer" onclick="this.querySelector('.blog-box').style.display=this.querySelector('.blog-box').style.display==='none'?'block':'none'"><div class="job-head"><div class="job-title">${c.title}</div><div style="font-size:12px;color:var(--text-dim)">${c.date?new Date(c.date).toLocaleDateString():c.filename}</div></div><div class="blog-box" style="display:none">${md(c.fullContent)}</div></div>`).join('');
+}
 
-      container.innerHTML = jobsHtml;
-    }
+// Schedules
+function showScheduleForm() { document.getElementById('schedule-form').style.display = 'block'; }
+async function createSchedule() {
+  const b = { name: document.getElementById('sched-name').value, request: document.getElementById('sched-request').value, frequency: document.getElementById('sched-freq').value, dayOfWeek: parseInt(document.getElementById('sched-day').value), hour: parseInt(document.getElementById('sched-hour').value), type: document.getElementById('sched-type').value };
+  await fetch(`${API}/schedules`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(b) });
+  document.getElementById('schedule-form').style.display = 'none';
+  loadSchedules(); loadCalendar();
+}
+async function loadSchedules() {
+  const d = await (await fetch(`${API}/schedules`)).json();
+  const el = document.getElementById('schedule-table');
+  if (!d.jobs?.length) { el.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-dim);padding:24px">No schedules yet</td></tr>'; return; }
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  el.innerHTML = d.jobs.map(j => `<tr><td>${j.name}</td><td>${j.schedule.frequency}${j.schedule.dayOfWeek!==undefined?' ('+days[j.schedule.dayOfWeek]+')':''} ${j.schedule.hour}:${String(j.schedule.minute||0).padStart(2,'0')} UTC</td><td>${new Date(j.nextRun).toLocaleString()}</td><td>${j.runCount}</td><td>${j.enabled?'<span style="color:var(--success)">Active</span>':'<span style="color:var(--text-dim)">Paused</span>'}</td><td><button class="btn btn-danger btn-sm" onclick="deleteSchedule('${j.id}')">Delete</button></td></tr>`).join('');
+}
+async function deleteSchedule(id) { await fetch(`${API}/schedules/${id}`, {method:'DELETE'}); loadSchedules(); }
+async function loadCalendar() {
+  const d = await (await fetch(`${API}/calendar?days=14`)).json();
+  const el = document.getElementById('calendar');
+  if (!d.calendar?.length) { el.innerHTML = '<div class="empty">No upcoming content scheduled</div>'; return; }
+  el.innerHTML = d.calendar.map(c => `<div style="padding:10px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between"><span>${c.name}</span><span style="color:var(--text-dim);font-size:12px">${new Date(c.date).toLocaleString()}</span></div>`).join('');
+}
 
-    // Render result
-    function renderResult(result) {
-      let html = '';
+// Brand
+async function loadBrand() {
+  const d = await (await fetch(`${API}/brand`)).json();
+  if (d.profile) {
+    document.getElementById('brand-voice').value = d.profile.voice || '';
+    document.getElementById('brand-tone').value = d.profile.tone || '';
+    document.getElementById('brand-audience').value = d.profile.audience || '';
+    document.getElementById('brand-industry').value = d.profile.industry || '';
+    document.getElementById('brand-keywords').value = (d.profile.keywords||[]).join(', ');
+    document.getElementById('brand-avoid').value = (d.profile.avoidWords||[]).join(', ');
+  }
+}
+async function saveBrand() {
+  const b = {
+    voice: document.getElementById('brand-voice').value,
+    tone: document.getElementById('brand-tone').value,
+    audience: document.getElementById('brand-audience').value,
+    industry: document.getElementById('brand-industry').value,
+    keywords: document.getElementById('brand-keywords').value.split(',').map(s=>s.trim()).filter(Boolean),
+    avoidWords: document.getElementById('brand-avoid').value.split(',').map(s=>s.trim()).filter(Boolean),
+  };
+  await fetch(`${API}/brand`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(b) });
+  alert('Brand saved!');
+}
+async function analyzeBrand() {
+  const sample = document.getElementById('brand-sample').value;
+  if (!sample) return;
+  document.getElementById('brand-analysis').innerHTML = '<span class="spinner"></span> Analyzing...';
+  const d = await (await fetch(`${API}/brand/analyze`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({sample}) })).json();
+  const a = d.analysis || {};
+  document.getElementById('brand-analysis').innerHTML = `<div class="result-card"><div class="result-text">${JSON.stringify(a,null,2)}</div></div>`;
+}
+async function submitFeedback() {
+  const feedback = document.getElementById('brand-feedback').value;
+  if (!feedback) return;
+  const d = await (await fetch(`${API}/brand/feedback`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({feedback}) })).json();
+  document.getElementById('feedback-result').innerHTML = `<div style="color:var(--success)">✅ Learned: ${d.learned||'feedback recorded'}</div>`;
+  document.getElementById('brand-feedback').value = '';
+}
 
-      // Blog content
-      if (result.finalContent && typeof result.finalContent === 'string') {
-        html += `
-          <div class="blog-preview">${markdownToHtml(result.finalContent)}</div>
-        `;
-      }
+// Tenants
+function showTenantForm() { document.getElementById('tenant-form').style.display = 'block'; }
+async function createTenant() {
+  const b = { name: document.getElementById('t-name').value, brand: { voice: document.getElementById('t-voice').value, audience: document.getElementById('t-audience').value, industry: document.getElementById('t-industry').value }};
+  await fetch(`${API}/tenants`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(b) });
+  document.getElementById('tenant-form').style.display = 'none';
+  loadTenants(); loadTenantBar();
+}
+async function loadTenants() {
+  const d = await (await fetch(`${API}/tenants`)).json();
+  const el = document.getElementById('tenants-list');
+  if (!d.tenants?.length) { el.innerHTML = '<div class="empty"><div class="icon">👥</div>No brands yet. Create one above!</div>'; return; }
+  el.innerHTML = d.tenants.map(t => `<div class="card" style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;align-items:center"><div><strong>${t.name}</strong> <span style="color:var(--text-dim);font-size:12px">${t.slug}</span><br><span style="font-size:12px;color:var(--text-dim)">Voice: ${t.brand?.voice||'-'} | Audience: ${t.brand?.audience||'-'} | Platforms: ${t.platforms?.join(', ')||'none'}</span></div><button class="btn btn-danger btn-sm" onclick="deleteTenant('${t.id}')">Delete</button></div></div>`).join('');
+}
+async function deleteTenant(id) { await fetch(`${API}/tenants/${id}`, {method:'DELETE'}); loadTenants(); loadTenantBar(); }
 
-      // Social media posts
-      if (result.finalContent?.twitter || result.finalContent?.linkedin || result.finalContent?.instagram || result.finalContent?.facebook) {
-        const social = result.finalContent;
-        html += '<div class="results-grid">';
+// Settings
+async function loadSettings() {
+  const h = await (await fetch(`${API}/health`)).json();
+  document.getElementById('sys-info').innerHTML = `<div style="font-size:13px;line-height:2"><strong>Provider:</strong> ${h.provider}<br><strong>Model:</strong> ${h.model||'default'}<br><strong>Agents:</strong> ${h.agents?.join(', ')}</div>`;
+  const i = await (await fetch(`${API}/integrations`)).json();
+  document.getElementById('integrations-list').innerHTML = (i.platforms||[]).map(p => `<div class="agent-tag" style="margin:4px">${p}</div>`).join('') || '<div class="empty">No integrations</div>';
+}
 
-        if (social.twitter) {
-          const thread = social.twitter.thread?.join('\n\n---\n\n') || '';
-          const hashtags = social.twitter.hashtags?.join(' ') || '';
-          html += renderSocialCard('🐦', 'Twitter Thread', thread + '\n\n' + hashtags);
-        }
-        if (social.linkedin) {
-          const hashtags = social.linkedin.hashtags?.join(' ') || '';
-          html += renderSocialCard('💼', 'LinkedIn', (social.linkedin.post || '') + '\n\n' + hashtags);
-        }
-        if (social.instagram) {
-          const hashtags = social.instagram.hashtags?.join(' ') || '';
-          html += renderSocialCard('📸', 'Instagram', (social.instagram.caption || '') + '\n\n' + hashtags);
-        }
-        if (social.facebook) {
-          html += renderSocialCard('📘', 'Facebook', social.facebook.post || '');
-        }
-
-        html += '</div>';
-      }
-
-      // Steps summary
-      if (result.summary) {
-        html += `<div style="margin-top: 16px; font-size: 12px; color: var(--text-dim);">${result.summary.replace(/\n/g, '<br>')}</div>`;
-      }
-
-      return html;
-    }
-
-    function renderSocialCard(icon, platform, content) {
-      const escaped = content.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-      return `
-        <div class="result-card">
-          <h3><span class="platform-icon">${icon}</span> ${platform}</h3>
-          <div class="result-content">${escaped}</div>
-          <button class="btn-copy" onclick="copyText(this, \`${btoa(encodeURIComponent(content))}\`)">📋 Copy</button>
-        </div>
-      `;
-    }
-
-    function copyText(btn, encoded) {
-      const text = decodeURIComponent(atob(encoded));
-      navigator.clipboard.writeText(text);
-      btn.textContent = '✅ Copied!';
-      setTimeout(() => btn.textContent = '📋 Copy', 2000);
-    }
-
-    function markdownToHtml(md) {
-      return md
-        .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-        .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-        .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.+?)\*/g, '<em>$1</em>')
-        .replace(/^- (.+)$/gm, '• $1<br>')
-        .replace(/\n\n/g, '</p><p>')
-        .replace(/\n/g, '<br>')
-        .replace(/^/, '<p>')
-        .replace(/$/, '</p>');
-    }
-
-    // Load history
-    async function loadHistory() {
-      try {
-        const res = await fetch(`${API}/content`);
-        const data = await res.json();
-        const container = document.getElementById('history-container');
-
-        if (!data.content?.length) {
-          container.innerHTML = `<div class="empty-state"><div class="emoji">✨</div><p>No content generated yet.</p></div>`;
-          return;
-        }
-
-        container.innerHTML = data.content.map(item => `
-          <div class="job-card done" style="cursor: pointer;" onclick="this.querySelector('.blog-preview').style.display = this.querySelector('.blog-preview').style.display === 'none' ? 'block' : 'none'">
-            <div class="job-header">
-              <div class="job-title">${item.title}</div>
-              <div class="job-time">${item.date ? new Date(item.date).toLocaleDateString() : item.filename}</div>
-            </div>
-            <div class="blog-preview" style="display: none;">${markdownToHtml(item.fullContent)}</div>
-          </div>
-        `).join('');
-      } catch {}
-    }
-
-    init();
-  </script>
+init();
+</script>
 </body>
 </html>
