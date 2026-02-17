@@ -57,7 +57,7 @@ async function main() {
   const publisher = new PublisherAgent(executor, integrationsDir, outputDir);
 
   // Load credentials from environment
-  const credentialPrefixes = ["WORDPRESS_", "TWITTER_", "LINKEDIN_", "GITHUB_"];
+  const credentialPrefixes = ["WORDPRESS_", "TWITTER_", "LINKEDIN_", "GITHUB_", "MEDIUM_", "DEVTO_"];
   for (const [key, value] of Object.entries(process.env)) {
     if (value && credentialPrefixes.some((p) => key.startsWith(p))) {
       executor.setCredential(key, value);

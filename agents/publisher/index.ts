@@ -131,15 +131,32 @@ export class PublisherAgent extends BaseAgent {
         continue;
       }
 
-      // Execute the integration
+      // Execute the integration — format content per platform
       try {
-        const execResult = await this.executor.run(integration.code, {
+        const publishInput: Record<string, any> = {
           action: "publish",
           title: task.input.title,
-          content: task.input.content,
           summary: task.input.summary,
-          ...task.input,
-        });
+        };
+
+        // Platform-specific formatting
+        if (p === "twitter" && task.input.socialContent?.twitter) {
+          const tw = task.input.socialContent.twitter;
+          publishInput.thread = tw.thread;
+          publishInput.content = tw.thread?.[0] || task.input.content;
+          publishInput.text = tw.thread?.[0] || task.input.content;
+        } else if (p === "linkedin" && task.input.socialContent?.linkedin) {
+          const li = task.input.socialContent.linkedin;
+          publishInput.content = li.post + "\n\n" + (li.hashtags?.join(" ") || "");
+          publishInput.articleUrl = task.input.blogUrl;
+        } else if (p === "medium" || p === "devto") {
+          publishInput.content = task.input.content;
+          publishInput.tags = task.input.tags || [];
+        } else {
+          publishInput.content = task.input.content;
+        }
+
+        const execResult = await this.executor.run(integration.code, publishInput);
 
         results.push({
           platform: p,

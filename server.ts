@@ -99,7 +99,7 @@ scheduler.startTicker(async (job) => {
 
 // Load credentials
 for (const [key, value] of Object.entries(process.env)) {
-  if (value && ["WORDPRESS_", "TWITTER_", "LINKEDIN_", "GITHUB_"].some((p) => key.startsWith(p))) {
+  if (value && ["WORDPRESS_", "TWITTER_", "LINKEDIN_", "GITHUB_", "MEDIUM_", "DEVTO_"].some((p) => key.startsWith(p))) {
     executor.setCredential(key, value);
   }
 }

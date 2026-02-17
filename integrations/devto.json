@@ -1,0 +1,9 @@
+{
+  "name": "devto",
+  "description": "Publish articles to Dev.to via API",
+  "code": "async function execute(input, credentials) {\n  const apiKey = credentials.DEVTO_API_KEY || '';\n  if (!apiKey) return { success: false, error: 'DEVTO_API_KEY not set' };\n\n  const headers = {\n    'Content-Type': 'application/json',\n    'api-key': apiKey\n  };\n\n  const { action } = input;\n\n  if (action === 'publish' || action === 'create') {\n    const body = {\n      article: {\n        title: input.title || 'Untitled',\n        body_markdown: input.content || '',\n        published: !input.draft,\n        tags: (input.tags || []).slice(0, 4),\n        description: input.summary || '',\n        canonical_url: input.canonicalUrl || undefined\n      }\n    };\n\n    const res = await fetch('https://dev.to/api/articles', {\n      method: 'POST',\n      headers,\n      body: JSON.stringify(body)\n    });\n\n    const data = await res.json();\n    if (!res.ok) return { success: false, error: data.error || `HTTP ${res.status}` };\n\n    return {\n      success: true,\n      data: {\n        id: data.id,\n        url: data.url,\n        title: data.title,\n        published: data.published\n      }\n    };\n  }\n\n  if (action === 'list') {\n    const res = await fetch(`https://dev.to/api/articles/me?per_page=${input.limit || 10}`, { headers });\n    const data = await res.json();\n    return { success: true, data: data.map(a => ({ id: a.id, title: a.title, url: a.url, published: a.published })) };\n  }\n\n  return { success: false, error: `Unknown action: ${action}` };\n}",
+  "requirements": [
+    { "name": "DEVTO_API_KEY", "description": "Dev.to API Key (Settings → Extensions → DEV Community API Keys)", "type": "api_key", "required": true }
+  ],
+  "createdAt": "2026-02-17T13:00:00Z"
+}

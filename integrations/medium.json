@@ -1,0 +1,9 @@
+{
+  "name": "medium",
+  "description": "Publish articles to Medium via API",
+  "code": "async function execute(input, credentials) {\n  const token = credentials.MEDIUM_TOKEN || '';\n  if (!token) return { success: false, error: 'MEDIUM_TOKEN not set' };\n\n  const headers = {\n    'Content-Type': 'application/json',\n    'Authorization': `Bearer ${token}`\n  };\n\n  const { action } = input;\n\n  if (action === 'publish' || action === 'create') {\n    // Get user ID first\n    const meRes = await fetch('https://api.medium.com/v1/me', { headers });\n    const meData = await meRes.json();\n    if (!meRes.ok) return { success: false, error: meData.errors?.[0]?.message || `HTTP ${meRes.status}` };\n    const userId = meData.data?.id;\n\n    const body = {\n      title: input.title || 'Untitled',\n      contentFormat: 'markdown',\n      content: input.content || '',\n      publishStatus: input.draft ? 'draft' : 'public',\n      tags: input.tags || []\n    };\n\n    const res = await fetch(`https://api.medium.com/v1/users/${userId}/posts`, {\n      method: 'POST',\n      headers,\n      body: JSON.stringify(body)\n    });\n\n    const data = await res.json();\n    if (!res.ok) return { success: false, error: data.errors?.[0]?.message || `HTTP ${res.status}` };\n\n    return {\n      success: true,\n      data: {\n        id: data.data?.id,\n        url: data.data?.url,\n        title: data.data?.title,\n        publishStatus: data.data?.publishStatus\n      }\n    };\n  }\n\n  return { success: false, error: `Unknown action: ${action}` };\n}",
+  "requirements": [
+    { "name": "MEDIUM_TOKEN", "description": "Medium Integration Token (Settings → Security → Integration tokens)", "type": "api_key", "required": true }
+  ],
+  "createdAt": "2026-02-17T13:00:00Z"
+}
