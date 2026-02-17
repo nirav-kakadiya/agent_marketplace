@@ -13,6 +13,7 @@ import { LLM } from "./core/llm";
 import { Executor } from "./core/executor";
 import { createMessage } from "./core/message";
 import { TenantManager } from "./core/tenant";
+import { Auth } from "./core/auth";
 
 import { OrchestratorAgent } from "./agents/orchestrator";
 import { ResearcherAgent } from "./agents/researcher";
@@ -52,6 +53,10 @@ await memory.init();
 
 const tenantManager = new TenantManager(join(ROOT, "data", "tenants"));
 await tenantManager.init();
+
+const authEnabled = process.env.AUTH_ENABLED !== "false";
+const auth = new Auth(join(ROOT, "data", "auth"), authEnabled);
+await auth.init();
 
 const orchestrator = new OrchestratorAgent(llm, bus, memory);
 const researcher = new ResearcherAgent(llm);
@@ -131,6 +136,50 @@ app.use("/*", cors());
 // Serve static UI
 app.use("/ui/*", serveStatic({ root: "./public/" }));
 app.get("/", (c) => c.redirect("/ui/index.html"));
+
+// Auth middleware — protect /api/* except health and login
+app.use("/api/*", async (c, next) => {
+  const path = c.req.path;
+  if (path === "/api/health" || path === "/api/auth/login" || !auth.isEnabled()) {
+    return next();
+  }
+
+  // Check API key header or session cookie
+  const apiKey = c.req.header("X-API-Key") || c.req.header("Authorization")?.replace("Bearer ", "");
+  const sessionToken = c.req.header("X-Session-Token");
+
+  const user = apiKey
+    ? auth.authenticateApiKey(apiKey)
+    : sessionToken
+      ? auth.authenticateSession(sessionToken)
+      : null;
+
+  if (!user) {
+    return c.json({ error: "Unauthorized. Provide X-API-Key or X-Session-Token header." }, 401);
+  }
+
+  c.set("user", user);
+  return next();
+});
+
+// Auth endpoints
+app.post("/api/auth/login", async (c) => {
+  const { apiKey } = await c.req.json();
+  const result = auth.login(apiKey);
+  if (!result) return c.json({ error: "Invalid API key" }, 401);
+  return c.json({ token: result.token, user: { id: result.user.id, name: result.user.name, role: result.user.role } });
+});
+
+app.post("/api/auth/logout", (c) => {
+  const token = c.req.header("X-Session-Token");
+  if (token) auth.logout(token);
+  return c.json({ ok: true });
+});
+
+app.get("/api/auth/me", (c) => {
+  const user = c.get("user");
+  return c.json({ user: { id: user?.id, name: user?.name, email: user?.email, role: user?.role } });
+});
 
 // Health
 app.get("/api/health", (c) =>
