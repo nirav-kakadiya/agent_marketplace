@@ -15,6 +15,7 @@ import { WriterAgent } from "./agents/writer";
 import { EditorAgent } from "./agents/editor";
 import { PublisherAgent } from "./agents/publisher";
 import { SkillBuilderAgent } from "./agents/skill-builder";
+import { SocialWriterAgent } from "./agents/social-writer";
 
 const ROOT = import.meta.dir || __dirname;
 
@@ -61,6 +62,7 @@ async function main() {
     }
   }
   const skillBuilder = new SkillBuilderAgent(llm, executor, integrationsDir);
+  const socialWriter = new SocialWriterAgent(llm, memory);
 
   await publisher.init();
 
@@ -70,6 +72,7 @@ async function main() {
   bus.register(editor);
   bus.register(publisher);
   bus.register(skillBuilder);
+  bus.register(socialWriter);
 
   // --- Add logging middleware ---
   bus.use(async (message, next) => {
