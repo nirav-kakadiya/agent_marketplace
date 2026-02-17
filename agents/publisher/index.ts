@@ -1,10 +1,7 @@
-// Publisher Agent — publishes content to platforms (WordPress, Twitter, etc.)
-// Uses self-built integrations from the integrations/ folder
-// Always saves locally + publishes to requested platforms
+// Publisher Agent — publishes content to platforms using integration configs
 
 import { BaseAgent } from "../../core/agent";
 import { createMessage, type Message, type TaskPayload, type ResultPayload } from "../../core/message";
-import { Executor } from "../../core/executor";
 import { readdir, readFile, writeFile, mkdir } from "fs/promises";
 import { join } from "path";
 
@@ -16,34 +13,37 @@ interface Integration {
 }
 
 export class PublisherAgent extends BaseAgent {
-  private executor: Executor;
   private integrationsDir: string;
   private outputDir: string;
   private integrations: Map<string, Integration> = new Map();
+  private credentials: Map<string, string> = new Map();
 
-  constructor(executor: Executor, integrationsDir: string, outputDir: string) {
+  constructor(integrationsDir: string, outputDir: string) {
     super({
       name: "publisher",
-      description: "Publishes content to platforms and saves locally",
+      description: "Publishes content to platforms — WordPress, Twitter, LinkedIn, Medium, Dev.to, local files",
       version: "2.0.0",
       capabilities: [
         {
           name: "publish",
-          description: "Publish content to one or more platforms (wordpress, twitter, linkedin, local-file)",
-          inputSchema: { platform: "string|string[]", content: "string", title: "string?", summary: "string?" },
+          description: "Publish content to one or more platforms",
+          inputSchema: { content: "string", title: "string?", platforms: "string[]?", draft: "boolean?" },
           outputSchema: { results: "object[]" },
         },
         {
-          name: "list-platforms",
-          description: "List available publishing platforms",
+          name: "list-integrations",
+          description: "List available publishing integrations",
           inputSchema: {},
-          outputSchema: { platforms: "string[]" },
+          outputSchema: { integrations: "string[]" },
         },
       ],
     });
-    this.executor = executor;
     this.integrationsDir = integrationsDir;
     this.outputDir = outputDir;
+  }
+
+  setCredential(key: string, value: string) {
+    this.credentials.set(key, value);
   }
 
   async init() {
@@ -54,181 +54,105 @@ export class PublisherAgent extends BaseAgent {
   private async loadIntegrations() {
     try {
       const files = await readdir(this.integrationsDir);
-      for (const file of files) {
-        if (file.endsWith(".json")) {
-          const content = await readFile(join(this.integrationsDir, file), "utf-8");
-          const integration: Integration = JSON.parse(content);
-          this.integrations.set(integration.name, integration);
-        }
+      for (const f of files) {
+        if (!f.endsWith(".json")) continue;
+        try {
+          const data = JSON.parse(await readFile(join(this.integrationsDir, f), "utf-8"));
+          this.integrations.set(data.name, data);
+        } catch {}
       }
-      if (this.integrations.size > 0) {
-        console.log(`📤 Publisher: ${this.integrations.size} integrations (${Array.from(this.integrations.keys()).join(", ")})`);
-      }
-    } catch {}
+      console.log(`📤 Publisher: ${this.integrations.size} integrations loaded`);
+    } catch {
+      console.log("📤 Publisher: no integrations found");
+    }
   }
 
   async handle(message: Message): Promise<Message> {
     const task = message.payload as TaskPayload;
 
-    if (task.action === "list-platforms") {
-      return createMessage(
-        this.name,
-        message.from,
-        "result",
-        {
-          success: true,
-          output: {
-            platforms: Array.from(this.integrations.keys()),
-            descriptions: Array.from(this.integrations.values()).map((i) => ({
-              name: i.name,
-              description: i.description,
-            })),
-          },
-        } satisfies ResultPayload,
-        message.id
-      );
-    }
-
-    // Determine platforms to publish to
-    let platforms: string[] = [];
-    if (task.input.platform) {
-      platforms = Array.isArray(task.input.platform) ? task.input.platform : [task.input.platform];
-    }
-
-    // Always save locally first
-    const results: any[] = [];
-    const localResult = await this.saveLocally(task.input);
-    results.push({ platform: "local-file", ...localResult });
-
-    // Publish to each requested platform
-    for (const platform of platforms) {
-      const p = platform.toLowerCase();
-      if (p === "local-file" || p === "local") continue; // already saved
-
-      const integration = this.integrations.get(p);
-      if (!integration) {
-        results.push({
-          platform: p,
-          success: false,
-          error: `No integration for "${p}". Available: ${Array.from(this.integrations.keys()).join(", ")}`,
-          needsBuild: p,
-        });
-        continue;
-      }
-
-      // Check if credentials are available
-      const missingCreds = integration.requirements
-        .filter((r) => r.required && !this.executor.getCredential(r.name))
-        .map((r) => r.name);
-
-      if (missingCreds.length > 0) {
-        results.push({
-          platform: p,
-          success: false,
-          error: `Missing credentials: ${missingCreds.join(", ")}. Set them as environment variables.`,
-          missingCredentials: missingCreds,
-        });
-        continue;
-      }
-
-      // Execute the integration — format content per platform
-      try {
-        const publishInput: Record<string, any> = {
-          action: "publish",
-          title: task.input.title,
-          summary: task.input.summary,
-        };
-
-        // Platform-specific formatting
-        if (p === "twitter" && task.input.socialContent?.twitter) {
-          const tw = task.input.socialContent.twitter;
-          publishInput.thread = tw.thread;
-          publishInput.content = tw.thread?.[0] || task.input.content;
-          publishInput.text = tw.thread?.[0] || task.input.content;
-        } else if (p === "linkedin" && task.input.socialContent?.linkedin) {
-          const li = task.input.socialContent.linkedin;
-          publishInput.content = li.post + "\n\n" + (li.hashtags?.join(" ") || "");
-          publishInput.articleUrl = task.input.blogUrl;
-        } else if (p === "medium" || p === "devto") {
-          publishInput.content = task.input.content;
-          publishInput.tags = task.input.tags || [];
-        } else {
-          publishInput.content = task.input.content;
-        }
-
-        const execResult = await this.executor.run(integration.code, publishInput);
-
-        results.push({
-          platform: p,
-          success: execResult.success,
-          data: execResult.output,
-          error: execResult.error,
-        });
-      } catch (err: any) {
-        results.push({
-          platform: p,
-          success: false,
-          error: err.message,
-        });
-      }
-    }
-
-    // Check if any platform needs building
-    const needsBuild = results.find((r) => r.needsBuild);
-
-    return createMessage(
-      this.name,
-      message.from,
-      needsBuild ? "error" : "result",
-      needsBuild
-        ? {
-            code: "INTEGRATION_NOT_FOUND",
-            message: `Missing integration: ${needsBuild.needsBuild}`,
-            needsBuild: needsBuild.needsBuild,
-            partialResults: results,
-            retryable: false,
-          }
-        : {
-            success: true,
-            output: {
-              results,
-              publishedTo: results.filter((r) => r.success).map((r) => r.platform),
-              failedOn: results.filter((r) => !r.success).map((r) => `${r.platform}: ${r.error}`),
-            },
-          } satisfies ResultPayload,
-      message.id
-    );
-  }
-
-  // Always save content locally as markdown
-  private async saveLocally(input: any): Promise<{ success: boolean; path?: string; error?: string }> {
     try {
-      const title = input.title || "Untitled";
-      const content = input.content || "";
-      const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-      const date = new Date().toISOString().split("T")[0];
-      const filename = `${date}-${slug}.md`;
-      const filePath = join(this.outputDir, filename);
+      let output: any;
 
-      const markdown = `---
-title: "${title}"
-date: ${new Date().toISOString()}
-status: published
----
+      switch (task.action) {
+        case "list-integrations":
+          output = { integrations: Array.from(this.integrations.keys()) };
+          break;
+        case "publish":
+        default:
+          output = await this.publish(task.input);
+      }
 
-${content}
-`;
-
-      await writeFile(filePath, markdown);
-      console.log(`💾 Saved locally: ${filename}`);
-      return { success: true, path: filePath };
+      return createMessage(this.name, message.from, "result", {
+        success: true,
+        output,
+      } satisfies ResultPayload, message.id);
     } catch (err: any) {
-      return { success: false, error: err.message };
+      return createMessage(this.name, message.from, "error", {
+        code: "PUBLISHER_ERROR",
+        message: err.message,
+        retryable: true,
+      }, message.id);
     }
   }
 
-  async reload() {
-    this.integrations.clear();
-    await this.loadIntegrations();
+  private async publish(input: any): Promise<any> {
+    const platforms = input.platforms || ["local-file"];
+    const results: any[] = [];
+
+    for (const platform of platforms) {
+      try {
+        if (platform === "local-file") {
+          const result = await this.saveLocally(input);
+          results.push({ platform, ...result });
+        } else {
+          const integration = this.integrations.get(platform);
+          if (!integration) {
+            results.push({ platform, success: false, error: `No integration for: ${platform}` });
+            continue;
+          }
+          const result = await this.executeIntegration(integration, input);
+          results.push({ platform, ...result });
+        }
+      } catch (err: any) {
+        results.push({ platform, success: false, error: err.message });
+      }
+    }
+
+    return { results, publishedAt: new Date().toISOString() };
+  }
+
+  private async saveLocally(input: any): Promise<any> {
+    const slug = (input.slug || input.title || `post-${Date.now()}`)
+      .toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 50);
+    const filename = `${slug}.md`;
+    const filepath = join(this.outputDir, filename);
+
+    let content = "";
+    if (input.title) content += `# ${input.title}\n\n`;
+    if (input.metaDescription) content += `> ${input.metaDescription}\n\n`;
+    content += input.content || "";
+
+    await writeFile(filepath, content);
+    return { success: true, path: filepath, filename };
+  }
+
+  private async executeIntegration(integration: Integration, input: any): Promise<any> {
+    // Build credentials object from stored credentials
+    const creds: Record<string, string> = {};
+    for (const req of integration.requirements) {
+      const val = this.credentials.get(req.name);
+      if (val) creds[req.name] = val;
+      else if (req.required) {
+        return { success: false, error: `Missing credential: ${req.name}` };
+      }
+    }
+
+    // Execute the integration code
+    try {
+      const fn = new Function("input", "credentials", `return (async () => { ${integration.code} \n return await execute(input, credentials); })()`);
+      return await fn({ ...input, action: input.action || "publish" }, creds);
+    } catch (err: any) {
+      return { success: false, error: `Integration error: ${err.message}` };
+    }
   }
 }

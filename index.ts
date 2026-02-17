@@ -1,12 +1,13 @@
-// ARISE — AI Agent System
-// Future-proof message bus architecture
-// Add agent #N = create a folder, register it. Zero changes to anything else.
+// Agent Marketplace — Marketing Agent
+// Multi-agent system with campaign orchestration
+// Run: bun run index.ts "your request"
 
 import { join } from "path";
 import { MessageBus } from "./core/bus";
 import { Memory } from "./core/memory";
 import { LLM } from "./core/llm";
-import { Executor } from "./core/executor";
+import { createMessage } from "./core/message";
+import type { SearchConfig } from "./agents/researcher/tools/web-search";
 
 // Agents
 import { OrchestratorAgent } from "./agents/orchestrator";
@@ -14,143 +15,122 @@ import { ResearcherAgent } from "./agents/researcher";
 import { WriterAgent } from "./agents/writer";
 import { EditorAgent } from "./agents/editor";
 import { PublisherAgent } from "./agents/publisher";
-import { SkillBuilderAgent } from "./agents/skill-builder";
 import { SocialWriterAgent } from "./agents/social-writer";
 import { BrandManagerAgent } from "./agents/brand-manager";
 import { SchedulerAgent } from "./agents/scheduler";
 import { AnalyticsAgent } from "./agents/analytics";
+import { CampaignManagerAgent } from "./agents/campaign-manager";
 
 const ROOT = import.meta.dir || __dirname;
 
 async function main() {
-  console.log("🚀 ARISE — AI Agent System");
-  console.log("Future-proof architecture with message bus\n");
+  console.log("🚀 Agent Marketplace — Marketing Agent");
+  console.log("━".repeat(45));
 
   // --- Config ---
-  const apiKey = process.env.LLM_API_KEY || process.env.OPENROUTER_API_KEY || process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY || process.env.GEMINI_API_KEY || "";
-  const provider = process.env.LLM_PROVIDER || (process.env.OPENROUTER_API_KEY ? "openrouter" : process.env.ANTHROPIC_API_KEY ? "anthropic" : process.env.GEMINI_API_KEY ? "gemini" : "openai");
+  const apiKey = process.env.LLM_API_KEY || process.env.OPENROUTER_API_KEY || process.env.ANTHROPIC_API_KEY || process.env.OPENAI_API_KEY || "";
+  const provider = process.env.LLM_PROVIDER || (process.env.OPENROUTER_API_KEY ? "openrouter" : process.env.ANTHROPIC_API_KEY ? "anthropic" : "openai");
   const model = process.env.LLM_MODEL || undefined;
   const baseUrl = process.env.LLM_BASE_URL || undefined;
 
   if (!apiKey) {
-    console.error("❌ Set LLM_API_KEY (or OPENROUTER_API_KEY / ANTHROPIC_API_KEY / OPENAI_API_KEY / GEMINI_API_KEY)");
+    console.error("❌ Set LLM_API_KEY (or OPENROUTER_API_KEY / ANTHROPIC_API_KEY / OPENAI_API_KEY)");
     process.exit(1);
   }
 
+  const searchConfig: SearchConfig = {
+    provider: (process.env.SEARCH_PROVIDER as any) || "brave",
+    apiKey: process.env.SEARCH_API_KEY || "",
+  };
+
+  if (!searchConfig.apiKey) {
+    console.warn("⚠️  No SEARCH_API_KEY set — researcher will have limited capabilities");
+  }
+
   // --- Initialize core ---
-  const integrationsDir = join(ROOT, "integrations");
-  const memoryDir = join(ROOT, "memory");
-
   const llm = new LLM({ provider, apiKey, model, baseUrl });
-  const memory = new Memory(memoryDir);
-  const executor = new Executor();
+  const memory = new Memory(join(ROOT, "memory"));
   const bus = new MessageBus();
-
   await memory.init();
 
   // --- Register agents ---
-  // To add a new agent: create folder in agents/, import it, register it. Done.
   const orchestrator = new OrchestratorAgent(llm, bus, memory);
-  const researcher = new ResearcherAgent(llm);
-  const writer = new WriterAgent(llm, memory);
+  const researcher = new ResearcherAgent(llm, searchConfig);
+  const writer = new WriterAgent(llm, memory, searchConfig);
   const editor = new EditorAgent(llm);
-  const outputDir = join(ROOT, "output");
-  const publisher = new PublisherAgent(executor, integrationsDir, outputDir);
-
-  // Load credentials from environment
-  const credentialPrefixes = ["WORDPRESS_", "TWITTER_", "LINKEDIN_", "GITHUB_", "MEDIUM_", "DEVTO_"];
-  for (const [key, value] of Object.entries(process.env)) {
-    if (value && credentialPrefixes.some((p) => key.startsWith(p))) {
-      executor.setCredential(key, value);
-    }
-  }
-  const skillBuilder = new SkillBuilderAgent(llm, executor, integrationsDir);
+  const publisher = new PublisherAgent(join(ROOT, "integrations"), join(ROOT, "output"));
   const socialWriter = new SocialWriterAgent(llm, memory);
   const brandManager = new BrandManagerAgent(llm, memory);
   const scheduler = new SchedulerAgent(memory, join(ROOT, "data"));
+  const analytics = new AnalyticsAgent(memory);
+  const campaignManager = new CampaignManagerAgent(llm, bus, memory, join(ROOT, "data", "campaigns"));
+
+  // Load platform credentials
+  const credentialPrefixes = ["WORDPRESS_", "TWITTER_", "LINKEDIN_", "MEDIUM_", "DEVTO_"];
+  for (const [key, value] of Object.entries(process.env)) {
+    if (value && credentialPrefixes.some((p) => key.startsWith(p))) {
+      publisher.setCredential(key, value);
+    }
+  }
 
   await publisher.init();
+  await scheduler.init();
+  await campaignManager.init();
 
   bus.register(orchestrator);
   bus.register(researcher);
   bus.register(writer);
   bus.register(editor);
   bus.register(publisher);
-  bus.register(skillBuilder);
   bus.register(socialWriter);
   bus.register(brandManager);
-  const analytics = new AnalyticsAgent(memory);
-  await scheduler.init();
   bus.register(scheduler);
   bus.register(analytics);
+  bus.register(campaignManager);
 
-  // --- Add logging middleware ---
-  bus.use(async (message, next) => {
-    const start = Date.now();
-    const result = await next();
-    const ms = Date.now() - start;
-    console.log(`  ⏱️  ${message.from} → ${message.to} (${ms}ms)`);
-    return result;
-  });
+  console.log(`\n✅ ${bus.listAgentNames().length} agents ready: ${bus.listAgentNames().join(", ")}\n`);
 
-  // --- Handle input ---
+  // --- Handle CLI args ---
   const args = process.argv.slice(2);
-  const request = args.join(" ");
 
-  if (!request) {
-    console.log("\n📖 Usage:");
-    console.log('  bun run index.ts "Write a blog about AI trends"');
-    console.log('  bun run index.ts --agents          List all agents');
-    console.log('  bun run index.ts --build wordpress  Build an integration');
-    console.log('  bun run index.ts --memory           Show memory');
-    console.log('  bun run index.ts --integrations     List integrations');
-    return;
-  }
-
-  // Special commands
-  if (request === "--agents") {
-    console.log("\n🤖 Registered Agents:\n");
+  if (args.includes("--agents")) {
     console.log(bus.describeAll());
     return;
   }
 
-  if (request === "--memory") {
-    console.log("\n🧠 Memory:\n");
-    console.log(memory.summary());
-    return;
-  }
-
-  if (request === "--integrations") {
-    const { createMessage } = await import("./core/message");
-    const msg = createMessage("cli", "publisher", "task", { action: "list-platforms", input: {} });
-    const result = await bus.send(msg);
-    console.log("\n📤 Available Integrations:\n");
-    const platforms = result.payload?.output?.platforms || [];
-    console.log(platforms.length ? platforms.join(", ") : "None yet. Use --build <service> to create one.");
-    return;
-  }
-
-  if (request.startsWith("--build ")) {
-    const service = request.replace("--build ", "").trim();
-    const { createMessage } = await import("./core/message");
-    const msg = createMessage("cli", "skill-builder", "task", {
-      action: "build-integration",
-      input: { service },
+  if (args.includes("--strategies")) {
+    const msg = createMessage("cli", "campaign-manager", "task", {
+      action: "list-strategies",
+      input: {},
     });
-    console.log(`\n🔨 Building integration: ${service}\n`);
     const result = await bus.send(msg);
-    if (result.type === "result") {
-      console.log(`\n✅ Done! ${result.payload.output.name}`);
-      console.log(`   ${result.payload.output.description || ""}`);
-    } else {
-      console.log(`\n❌ Failed: ${result.payload.message}`);
-    }
+    console.log(JSON.stringify(result.payload, null, 2));
     return;
   }
 
-  // Regular request → orchestrator handles it
-  const { createMessage } = await import("./core/message");
-  console.log("─".repeat(50));
+  if (args.includes("--campaigns")) {
+    const msg = createMessage("cli", "campaign-manager", "task", {
+      action: "list-campaigns",
+      input: {},
+    });
+    const result = await bus.send(msg);
+    console.log(JSON.stringify(result.payload, null, 2));
+    return;
+  }
+
+  const request = args.filter((a) => !a.startsWith("--")).join(" ");
+  if (!request) {
+    console.log("Usage:");
+    console.log('  bun run index.ts "Write a blog about AI trends"');
+    console.log('  bun run index.ts "Launch my SaaS on Product Hunt"');
+    console.log("  bun run index.ts --agents");
+    console.log("  bun run index.ts --strategies");
+    console.log("  bun run index.ts --campaigns");
+    return;
+  }
+
+  // --- Run request through orchestrator ---
+  console.log(`📝 Request: "${request}"\n`);
 
   const msg = createMessage("cli", "orchestrator", "task", {
     action: "orchestrate",
@@ -159,17 +139,13 @@ async function main() {
 
   const result = await bus.send(msg);
 
-  console.log("\n" + "─".repeat(50));
-  if (result.type === "result" && result.payload?.output) {
-    const output = result.payload.output;
-    console.log("\n📄 RESULT:\n");
-    if (output.title) console.log(`Title: ${output.title}\n`);
-    console.log(output.finalContent || JSON.stringify(output, null, 2));
-    console.log("\n📊 Steps:");
-    console.log(output.summary);
-  } else {
-    console.log("\n❌ Error:", result.payload?.message || "Unknown error");
+  if (result.type === "error") {
+    console.error("❌ Error:", result.payload.message);
+    process.exit(1);
   }
+
+  console.log("\n📋 Result:");
+  console.log(JSON.stringify(result.payload, null, 2));
 }
 
 main().catch(console.error);

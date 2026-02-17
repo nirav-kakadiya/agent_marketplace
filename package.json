@@ -1,8 +1,15 @@
 {
-  "name": "arise",
+  "name": "agent-marketplace",
+  "version": "1.0.0",
+  "description": "Marketing Agent — autonomous multi-agent campaigns",
   "module": "index.ts",
   "type": "module",
   "private": true,
+  "scripts": {
+    "start": "bun run index.ts",
+    "server": "bun run server.ts",
+    "dev": "bun --watch run server.ts"
+  },
   "devDependencies": {
     "@types/bun": "latest"
   },
