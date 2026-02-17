@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ARISE — AI Content Pipeline</title>
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --surface2: #1a1a2e;
+      --border: #2a2a3e;
+      --text: #e4e4ed;
+      --text-dim: #8888a0;
+      --accent: #6c5ce7;
+      --accent2: #a29bfe;
+      --success: #00b894;
+      --error: #ff6b6b;
+      --warning: #fdcb6e;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* Header */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .logo {
+      font-size: 24px;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .logo span { font-weight: 400; opacity: 0.7; font-size: 14px; margin-left: 8px; }
+
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* Layout */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px;
+    }
+
+    /* Generate Section */
+    .generate-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px;
+      margin-bottom: 32px;
+    }
+
+    .generate-card h2 {
+      font-size: 20px;
+      margin-bottom: 20px;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .input-group input {
+      flex: 1;
+      padding: 14px 18px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      color: var(--text);
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .input-group input:focus {
+      border-color: var(--accent);
+    }
+
+    .input-group input::placeholder {
+      color: var(--text-dim);
+    }
+
+    .type-selector {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .type-btn {
+      padding: 8px 16px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-dim);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .type-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+    }
+
+    .type-btn:hover:not(.active) {
+      border-color: var(--accent);
+      color: var(--text);
+    }
+
+    .btn-generate {
+      padding: 14px 32px;
+      background: linear-gradient(135deg, var(--accent), #8b5cf6);
+      border: none;
+      border-radius: 12px;
+      color: white;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.1s, opacity 0.2s;
+    }
+
+    .btn-generate:hover { transform: translateY(-1px); }
+    .btn-generate:active { transform: translateY(0); }
+    .btn-generate:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Job Progress */
+    .job-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 16px;
+      transition: border-color 0.3s;
+    }
+
+    .job-card.running { border-color: var(--warning); }
+    .job-card.done { border-color: var(--success); }
+    .job-card.error { border-color: var(--error); }
+
+    .job-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .job-title { font-weight: 600; font-size: 15px; }
+
+    .job-status {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .job-status.running { background: rgba(253, 203, 110, 0.15); color: var(--warning); }
+    .job-status.done { background: rgba(0, 184, 148, 0.15); color: var(--success); }
+    .job-status.error { background: rgba(255, 107, 107, 0.15); color: var(--error); }
+
+    .job-time { font-size: 12px; color: var(--text-dim); }
+
+    /* Results */
+    .results-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    @media (max-width: 768px) {
+      .results-grid { grid-template-columns: 1fr; }
+    }
+
+    .result-card {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .result-card h3 {
+      font-size: 14px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .result-card .platform-icon {
+      font-size: 18px;
+    }
+
+    .result-content {
+      font-size: 13px;
+      line-height: 1.6;
+      color: var(--text-dim);
+      max-height: 300px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .result-content::-webkit-scrollbar { width: 4px; }
+    .result-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    .btn-copy {
+      margin-top: 12px;
+      padding: 6px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-dim);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-copy:hover { border-color: var(--accent); color: var(--text); }
+
+    /* Blog Preview */
+    .blog-preview {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin-top: 16px;
+      max-height: 500px;
+      overflow-y: auto;
+      font-size: 14px;
+      line-height: 1.8;
+    }
+
+    .blog-preview h1, .blog-preview h2, .blog-preview h3 {
+      color: var(--text);
+      margin: 16px 0 8px;
+    }
+
+    .blog-preview h1 { font-size: 22px; }
+    .blog-preview h2 { font-size: 18px; }
+    .blog-preview p { color: var(--text-dim); margin-bottom: 12px; }
+
+    /* Agents sidebar */
+    .agents-bar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 32px;
+    }
+
+    .agent-chip {
+      padding: 6px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      font-size: 12px;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .agent-chip .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--success);
+    }
+
+    /* Loading spinner */
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 8px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* History */
+    .section-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 48px;
+      color: var(--text-dim);
+    }
+
+    .empty-state .emoji { font-size: 48px; margin-bottom: 12px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">ARISE <span>AI Content Pipeline</span></div>
+    <div class="status-badge">
+      <div class="status-dot"></div>
+      <span id="status-text">Connecting...</span>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- Agents -->
+    <div class="agents-bar" id="agents-bar"></div>
+
+    <!-- Generate -->
+    <div class="generate-card">
+      <h2>🚀 Generate Content</h2>
+      <div class="type-selector">
+        <button class="type-btn active" data-type="blog+social">📝 Blog + Social</button>
+        <button class="type-btn" data-type="blog">📝 Blog Only</button>
+        <button class="type-btn" data-type="social">📱 Social Only</button>
+      </div>
+      <div class="input-group">
+        <input type="text" id="topic-input" placeholder="Enter a topic... e.g. 'Why AI agents are the future of startups'" />
+        <button class="btn-generate" id="btn-generate" onclick="generate()">Generate ✨</button>
+      </div>
+    </div>
+
+    <!-- Active Jobs -->
+    <div id="jobs-container"></div>
+
+    <!-- History -->
+    <div class="section-title">📂 Generated Content</div>
+    <div id="history-container">
+      <div class="empty-state">
+        <div class="emoji">✨</div>
+        <p>No content generated yet. Start by entering a topic above!</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API = window.location.origin + '/api';
+    let selectedType = 'blog+social';
+    let activeJobs = new Map();
+
+    // Init
+    async function init() {
+      try {
+        const res = await fetch(`${API}/health`);
+        const data = await res.json();
+        document.getElementById('status-text').textContent = 
+          `${data.provider} / ${data.model || 'default'} — ${data.agents.length} agents`;
+        
+        // Load agents
+        const agentsRes = await fetch(`${API}/agents`);
+        const agentsData = await agentsRes.json();
+        const bar = document.getElementById('agents-bar');
+        bar.innerHTML = agentsData.agents.map(a => 
+          `<div class="agent-chip"><div class="dot"></div>${a.name}</div>`
+        ).join('');
+
+        // Load history
+        loadHistory();
+      } catch (e) {
+        document.getElementById('status-text').textContent = '❌ Disconnected';
+      }
+    }
+
+    // Type selector
+    document.querySelectorAll('.type-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        selectedType = btn.dataset.type;
+      });
+    });
+
+    // Enter key
+    document.getElementById('topic-input').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') generate();
+    });
+
+    // Generate
+    async function generate() {
+      const input = document.getElementById('topic-input');
+      const topic = input.value.trim();
+      if (!topic) return;
+
+      const btn = document.getElementById('btn-generate');
+      btn.disabled = true;
+      btn.textContent = 'Generating...';
+
+      try {
+        const res = await fetch(`${API}/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ topic, type: selectedType }),
+        });
+        const data = await res.json();
+
+        if (data.jobId) {
+          activeJobs.set(data.jobId, { topic, type: selectedType });
+          renderJobs();
+          pollJob(data.jobId);
+          input.value = '';
+        }
+      } catch (e) {
+        alert('Error: ' + e.message);
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Generate ✨';
+    }
+
+    // Poll job
+    async function pollJob(jobId) {
+      const poll = async () => {
+        try {
+          const res = await fetch(`${API}/jobs/${jobId}`);
+          const job = await res.json();
+
+          if (job.status === 'done' || job.status === 'error') {
+            activeJobs.set(jobId, { ...activeJobs.get(jobId), ...job });
+            renderJobs();
+            loadHistory();
+            return;
+          }
+
+          activeJobs.set(jobId, { ...activeJobs.get(jobId), ...job });
+          renderJobs();
+          setTimeout(poll, 3000);
+        } catch {
+          setTimeout(poll, 5000);
+        }
+      };
+      poll();
+    }
+
+    // Render jobs
+    function renderJobs() {
+      const container = document.getElementById('jobs-container');
+      const jobsHtml = Array.from(activeJobs.entries()).map(([id, job]) => {
+        const statusClass = job.status || 'running';
+        const statusLabel = job.status === 'done' ? '✅ Complete' : job.status === 'error' ? '❌ Error' : '⏳ Generating...';
+        
+        let resultHtml = '';
+        if (job.status === 'done' && job.result) {
+          resultHtml = renderResult(job.result);
+        } else if (job.status === 'error') {
+          resultHtml = `<div style="color: var(--error); padding: 12px;">${job.error}</div>`;
+        } else {
+          resultHtml = `<div style="padding: 16px; color: var(--text-dim);"><span class="spinner"></span>Agents are working on "${job.topic || job.request}"...</div>`;
+        }
+
+        return `
+          <div class="job-card ${statusClass}">
+            <div class="job-header">
+              <div class="job-title">${job.topic || job.request || id}</div>
+              <span class="job-status ${statusClass}">${statusLabel}</span>
+            </div>
+            ${job.completedAt ? `<div class="job-time">Completed: ${new Date(job.completedAt).toLocaleString()}</div>` : ''}
+            ${resultHtml}
+          </div>
+        `;
+      }).join('');
+
+      container.innerHTML = jobsHtml;
+    }
+
+    // Render result
+    function renderResult(result) {
+      let html = '';
+
+      // Blog content
+      if (result.finalContent && typeof result.finalContent === 'string') {
+        html += `
+          <div class="blog-preview">${markdownToHtml(result.finalContent)}</div>
+        `;
+      }
+
+      // Social media posts
+      if (result.finalContent?.twitter || result.finalContent?.linkedin || result.finalContent?.instagram || result.finalContent?.facebook) {
+        const social = result.finalContent;
+        html += '<div class="results-grid">';
+
+        if (social.twitter) {
+          const thread = social.twitter.thread?.join('\n\n---\n\n') || '';
+          const hashtags = social.twitter.hashtags?.join(' ') || '';
+          html += renderSocialCard('🐦', 'Twitter Thread', thread + '\n\n' + hashtags);
+        }
+        if (social.linkedin) {
+          const hashtags = social.linkedin.hashtags?.join(' ') || '';
+          html += renderSocialCard('💼', 'LinkedIn', (social.linkedin.post || '') + '\n\n' + hashtags);
+        }
+        if (social.instagram) {
+          const hashtags = social.instagram.hashtags?.join(' ') || '';
+          html += renderSocialCard('📸', 'Instagram', (social.instagram.caption || '') + '\n\n' + hashtags);
+        }
+        if (social.facebook) {
+          html += renderSocialCard('📘', 'Facebook', social.facebook.post || '');
+        }
+
+        html += '</div>';
+      }
+
+      // Steps summary
+      if (result.summary) {
+        html += `<div style="margin-top: 16px; font-size: 12px; color: var(--text-dim);">${result.summary.replace(/\n/g, '<br>')}</div>`;
+      }
+
+      return html;
+    }
+
+    function renderSocialCard(icon, platform, content) {
+      const escaped = content.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      return `
+        <div class="result-card">
+          <h3><span class="platform-icon">${icon}</span> ${platform}</h3>
+          <div class="result-content">${escaped}</div>
+          <button class="btn-copy" onclick="copyText(this, \`${btoa(encodeURIComponent(content))}\`)">📋 Copy</button>
+        </div>
+      `;
+    }
+
+    function copyText(btn, encoded) {
+      const text = decodeURIComponent(atob(encoded));
+      navigator.clipboard.writeText(text);
+      btn.textContent = '✅ Copied!';
+      setTimeout(() => btn.textContent = '📋 Copy', 2000);
+    }
+
+    function markdownToHtml(md) {
+      return md
+        .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+        .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+        .replace(/^# (.+)$/gm, '<h1>$1</h1>')
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.+?)\*/g, '<em>$1</em>')
+        .replace(/^- (.+)$/gm, '• $1<br>')
+        .replace(/\n\n/g, '</p><p>')
+        .replace(/\n/g, '<br>')
+        .replace(/^/, '<p>')
+        .replace(/$/, '</p>');
+    }
+
+    // Load history
+    async function loadHistory() {
+      try {
+        const res = await fetch(`${API}/content`);
+        const data = await res.json();
+        const container = document.getElementById('history-container');
+
+        if (!data.content?.length) {
+          container.innerHTML = `<div class="empty-state"><div class="emoji">✨</div><p>No content generated yet.</p></div>`;
+          return;
+        }
+
+        container.innerHTML = data.content.map(item => `
+          <div class="job-card done" style="cursor: pointer;" onclick="this.querySelector('.blog-preview').style.display = this.querySelector('.blog-preview').style.display === 'none' ? 'block' : 'none'">
+            <div class="job-header">
+              <div class="job-title">${item.title}</div>
+              <div class="job-time">${item.date ? new Date(item.date).toLocaleDateString() : item.filename}</div>
+            </div>
+            <div class="blog-preview" style="display: none;">${markdownToHtml(item.fullContent)}</div>
+          </div>
+        `).join('');
+      } catch {}
+    }
+
+    init();
+  </script>
+</body>
+</html>
