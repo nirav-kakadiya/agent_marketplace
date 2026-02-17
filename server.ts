@@ -14,6 +14,9 @@ import { TenantStore } from "./core/tenant";
 import { Auth } from "./core/auth";
 import { loadConfig, resolveKeys, printConfig } from "./core/config";
 import { checkSetup, formatSetupStatus, canAgentWork } from "./core/setup";
+import { ResponseCache } from "./core/cache";
+import { buildCachedSystemPrompt, getAgentSystemPrompt, estimateCacheSavings } from "./core/prompt-cache";
+import { WebhookManager } from "./core/webhooks";
 
 import { OrchestratorAgent } from "./agents/orchestrator";
 import { ResearcherAgent } from "./agents/researcher";
@@ -63,6 +66,11 @@ await memory.init();
 
 const tenantStore = new TenantStore(join(ROOT, "data"));
 await tenantStore.init();
+
+const responseCache = new ResponseCache(join(ROOT, "data"), { ttlMs: 60 * 60 * 1000, maxEntries: 10000 });
+await responseCache.init();
+
+const webhookManager = new WebhookManager();
 
 const auth = new Auth(join(ROOT, "data", "auth"), config.authEnabled);
 await auth.init();
@@ -234,6 +242,18 @@ app.post("/api/v1/run", authMiddleware, async (c) => {
 
   // Build request with tenant-isolated context
   const request = body.request || body.topic;
+  const agentTarget = body.agent || "orchestrator";
+  const actionTarget = body.action || "orchestrate";
+
+  // ── Response Cache Check ──
+  // If identical request from same tenant exists in cache, return instantly (ZERO LLM cost)
+  if (tenant && !body.noCache) {
+    const cached = responseCache.get(tenant.id, agentTarget, actionTarget, { request });
+    if (cached) {
+      return c.json({ ...cached, _cached: true });
+    }
+  }
+
   const contextualRequest = tenantContext
     ? `${tenantContext}\n---\nUser request: ${request}`
     : request;
@@ -244,10 +264,28 @@ app.post("/api/v1/run", authMiddleware, async (c) => {
   });
   const result = await requestBus.send(msg);
 
-  // Learn from this interaction (update tenant memory)
+  // Cache successful responses
   if (tenant && result.type === "result") {
+    const ttl = ResponseCache.getTTL(actionTarget);
+    if (ttl > 0) {
+      await responseCache.set(tenant.id, agentTarget, actionTarget, { request }, result.payload, ttl);
+    }
+
+    // Learn from this interaction (update tenant memory)
     await tenantStore.updateMemory(tenant.id, {
-      history: { pastTopics: [request], pastOutputTypes: [body.agent || "orchestrator"], feedbackLog: [] },
+      history: { pastTopics: [request], pastOutputTypes: [agentTarget], feedbackLog: [] },
+    });
+
+    // Check usage warnings
+    const monthlyUsage = tenantStore.getById(tenant.id)?.usage.month.requests || 0;
+    const monthlyLimit = tenant.plan.limits.requestsPerMonth;
+    await webhookManager.checkUsageWarning(tenant.id, monthlyUsage, monthlyLimit);
+
+    // Fire content generated webhook
+    await webhookManager.fire(tenant.id, "content.generated", {
+      agent: agentTarget,
+      action: actionTarget,
+      request: request.slice(0, 200),
     });
   }
 
@@ -380,6 +418,95 @@ app.get("/api/v1/tenants/:id/usage", authMiddleware, (c) => {
   const tenant = tenantStore.getById(c.req.param("id"));
   if (!tenant) return c.json({ error: "Tenant not found" }, 404);
   return c.json(tenant.usage);
+});
+
+// === Usage Dashboard ===
+app.get("/api/v1/tenants/:id/dashboard", authMiddleware, (c) => {
+  const tenant = tenantStore.getById(c.req.param("id"));
+  if (!tenant) return c.json({ error: "Tenant not found" }, 404);
+
+  const limits = tenant.plan.limits;
+  const dailyPercent = limits.requestsPerDay > 0 ? Math.round((tenant.usage.today.requests / limits.requestsPerDay) * 100) : 0;
+  const monthlyPercent = limits.requestsPerMonth > 0 ? Math.round((tenant.usage.month.requests / limits.requestsPerMonth) * 100) : 0;
+
+  return c.json({
+    tenant: { id: tenant.id, name: tenant.name, plan: tenant.plan.name },
+    usage: {
+      today: { ...tenant.usage.today, limit: limits.requestsPerDay, percent: dailyPercent },
+      month: { ...tenant.usage.month, limit: limits.requestsPerMonth, percent: monthlyPercent },
+      allTime: tenant.usage.allTime,
+    },
+    memory: {
+      brand: tenant.memory.brand.name ? "configured" : "not set",
+      topics: tenant.memory.history.pastTopics.length,
+      feedback: tenant.memory.history.feedbackLog.length,
+      platforms: tenant.memory.platforms.configured,
+    },
+    plan: {
+      name: tenant.plan.name,
+      limits: tenant.plan.limits,
+      features: tenant.plan.features,
+      agentsAllowed: tenant.plan.limits.agentsAllowed,
+    },
+  });
+});
+
+// === GDPR — Export & Delete ===
+app.get("/api/v1/tenants/:id/export", authMiddleware, async (c) => {
+  const data = await tenantStore.exportTenantData(c.req.param("id"));
+  if (!data) return c.json({ error: "Tenant not found" }, 404);
+  return c.json(data);
+});
+
+app.delete("/api/v1/tenants/:id", authMiddleware, async (c) => {
+  const deleted = await tenantStore.deleteTenant(c.req.param("id"));
+  if (!deleted) return c.json({ error: "Tenant not found" }, 404);
+  responseCache.invalidateTenant(c.req.param("id"));
+  return c.json({ success: true, message: "Tenant and all data permanently deleted" });
+});
+
+// === Webhooks ===
+app.post("/api/v1/tenants/:id/webhooks", authMiddleware, async (c) => {
+  const body = await c.req.json();
+  webhookManager.register(c.req.param("id"), {
+    url: body.url,
+    secret: body.secret,
+    events: body.events || ["*"],
+    active: true,
+  });
+  return c.json({ success: true });
+});
+
+app.get("/api/v1/tenants/:id/webhooks", authMiddleware, (c) => {
+  return c.json({ webhooks: webhookManager.list(c.req.param("id")) });
+});
+
+app.delete("/api/v1/tenants/:id/webhooks", authMiddleware, async (c) => {
+  const body = await c.req.json();
+  const removed = webhookManager.remove(c.req.param("id"), body.url);
+  return c.json({ success: removed });
+});
+
+// === Cache Stats ===
+app.get("/api/v1/cache/stats", authMiddleware, (c) => {
+  return c.json(responseCache.getStats());
+});
+
+app.post("/api/v1/cache/invalidate", authMiddleware, async (c) => {
+  const body = await c.req.json();
+  let count = 0;
+  if (body.tenantId && body.agent) {
+    count = responseCache.invalidateAgent(body.tenantId, body.agent);
+  } else if (body.tenantId) {
+    count = responseCache.invalidateTenant(body.tenantId);
+  }
+  return c.json({ success: true, invalidated: count });
+});
+
+// === Prompt Cache Savings Estimate ===
+app.get("/api/v1/cache/savings", authMiddleware, (c) => {
+  const calls = parseInt(c.req.query("calls") || "1000");
+  return c.json(estimateCacheSavings(calls));
 });
 
 // === Auth ===

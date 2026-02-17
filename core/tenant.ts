@@ -333,25 +333,92 @@ export class TenantStore {
     };
   }
 
-  // ─── Persistence (each tenant = separate file for isolation) ───
+  // ─── Persistence (each tenant = separate FOLDER for full isolation) ───
+  // Structure:
+  //   tenants/
+  //     tenant_abc123/
+  //       profile.json    ← tenant info, plan, config
+  //       memory.json     ← brand, preferences, history
+  //       usage.json      ← daily/monthly/alltime stats
+  //       campaigns/      ← their campaigns
+  //       outputs/        ← their generated content
+
+  private tenantDir(tenantId: string): string {
+    return join(this.dataDir, tenantId);
+  }
 
   private async saveTenant(tenant: Tenant) {
-    const filePath = join(this.dataDir, `${tenant.id}.json`);
-    await writeFile(filePath, JSON.stringify(tenant, null, 2));
+    const dir = this.tenantDir(tenant.id);
+    await mkdir(dir, { recursive: true });
+    await mkdir(join(dir, "campaigns"), { recursive: true });
+    await mkdir(join(dir, "outputs"), { recursive: true });
+
+    // Split into separate files for clean isolation
+    const { memory, usage, ...profile } = tenant;
+    await writeFile(join(dir, "profile.json"), JSON.stringify(profile, null, 2));
+    await writeFile(join(dir, "memory.json"), JSON.stringify(memory, null, 2));
+    await writeFile(join(dir, "usage.json"), JSON.stringify(usage, null, 2));
   }
 
   private async loadAll() {
     try {
-      const files = await readdir(this.dataDir);
-      for (const file of files) {
-        if (!file.endsWith(".json")) continue;
+      const entries = await readdir(this.dataDir, { withFileTypes: true });
+      for (const entry of entries) {
+        if (!entry.isDirectory() || !entry.name.startsWith("tenant_")) continue;
         try {
-          const data = await readFile(join(this.dataDir, file), "utf-8");
-          const tenant: Tenant = JSON.parse(data);
+          const dir = join(this.dataDir, entry.name);
+          const profileData = await readFile(join(dir, "profile.json"), "utf-8");
+          const profile = JSON.parse(profileData);
+
+          let memory: TenantMemory;
+          try {
+            memory = JSON.parse(await readFile(join(dir, "memory.json"), "utf-8"));
+          } catch {
+            memory = { brand: {}, preferences: {}, history: { pastTopics: [], pastOutputTypes: [], feedbackLog: [] }, platforms: { configured: [] }, updatedAt: new Date().toISOString() };
+          }
+
+          let usage: TenantUsage;
+          try {
+            usage = JSON.parse(await readFile(join(dir, "usage.json"), "utf-8"));
+          } catch {
+            usage = { today: { date: "", requests: 0, tokens: 0 }, month: { month: "", requests: 0, tokens: 0, cost: 0 }, allTime: { requests: 0, tokens: 0, cost: 0, firstRequest: "" } };
+          }
+
+          const tenant: Tenant = { ...profile, memory, usage };
           this.tenants.set(tenant.id, tenant);
           this.keyIndex.set(tenant.apiKey, tenant.id);
-        } catch { /* skip corrupted files */ }
+        } catch { /* skip corrupted tenants */ }
       }
     } catch { /* dir doesn't exist yet */ }
+  }
+
+  // Delete all data for a tenant (GDPR compliance)
+  async deleteTenant(tenantId: string): Promise<boolean> {
+    const tenant = this.tenants.get(tenantId);
+    if (!tenant) return false;
+
+    this.keyIndex.delete(tenant.apiKey);
+    this.tenants.delete(tenantId);
+
+    // Remove entire tenant folder
+    const dir = this.tenantDir(tenantId);
+    try {
+      const { rm } = await import("fs/promises");
+      await rm(dir, { recursive: true, force: true });
+    } catch { /* already gone */ }
+
+    return true;
+  }
+
+  // Export all tenant data (GDPR data portability)
+  async exportTenantData(tenantId: string): Promise<any | null> {
+    const tenant = this.tenants.get(tenantId);
+    if (!tenant) return null;
+    return {
+      profile: { id: tenant.id, name: tenant.name, email: tenant.email, plan: tenant.plan.name, createdAt: tenant.createdAt },
+      memory: tenant.memory,
+      usage: tenant.usage,
+      exportedAt: new Date().toISOString(),
+    };
   }
 }
