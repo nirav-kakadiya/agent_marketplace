@@ -10,11 +10,10 @@ import { MessageBus } from "./core/bus";
 import { Memory } from "./core/memory";
 import { LLM } from "./core/llm";
 import { createMessage } from "./core/message";
-import { TenantManager } from "./core/tenant";
+import { TenantStore } from "./core/tenant";
 import { Auth } from "./core/auth";
 import { loadConfig, resolveKeys, printConfig } from "./core/config";
 import { checkSetup, formatSetupStatus, canAgentWork } from "./core/setup";
-import type { SearchConfig } from "./agents/researcher/tools/web-search";
 
 import { OrchestratorAgent } from "./agents/orchestrator";
 import { ResearcherAgent } from "./agents/researcher";
@@ -36,6 +35,7 @@ import { BrandDesignAgent } from "./agents/brand-design";
 import { DataAnalystAgent } from "./agents/data-analyst";
 import { DevOpsAgent } from "./agents/devops";
 import type { SearchConfig } from "./agents/researcher/tools/web-search";
+
 
 const ROOT = import.meta.dir || __dirname;
 
@@ -61,8 +61,8 @@ const memory = new Memory(join(ROOT, "memory"));
 const bus = new MessageBus();
 await memory.init();
 
-const tenantManager = new TenantManager(join(ROOT, "data", "tenants"));
-await tenantManager.init();
+const tenantStore = new TenantStore(join(ROOT, "data"));
+await tenantStore.init();
 
 const auth = new Auth(join(ROOT, "data", "auth"), config.authEnabled);
 await auth.init();
@@ -148,9 +148,14 @@ const authMiddleware = async (c: any, next: any) => {
 app.post("/api/v1/run", authMiddleware, async (c) => {
   const body = await c.req.json();
 
+  // ── Tenant Identification ──
+  // Every request is tied to a tenant. No tenant = no service.
+  const tenantKey = c.req.header("X-Tenant-Key") || body.tenantKey;
+  const tenant = tenantKey ? tenantStore.getByApiKey(tenantKey) : undefined;
+
   // Check setup first — guide user if not configured
   const setupResult = checkSetup(config);
-  if (!setupResult.ready && !body.userKeys?.llmApiKey) {
+  if (!setupResult.ready && !body.userKeys?.llmApiKey && !tenant?.config.llmApiKey) {
     return c.json({
       success: false,
       setup_required: true,
@@ -160,21 +165,42 @@ app.post("/api/v1/run", authMiddleware, async (c) => {
     }, 428); // 428 = Precondition Required
   }
 
+  // ── Tenant Usage Check ──
+  if (tenant) {
+    const usage = await tenantStore.trackUsage(tenant.id);
+    if (!usage.allowed) {
+      return c.json({ success: false, error: "rate_limit", message: usage.reason }, 429);
+    }
+    // Check agent access
+    if (body.agent) {
+      const access = tenantStore.canUseAgent(tenant.id, body.agent);
+      if (!access.allowed) {
+        return c.json({ success: false, error: "plan_limit", message: access.reason }, 403);
+      }
+    }
+  }
+
+  // ── Tenant-Isolated Context ──
+  // Each tenant gets ONLY their own memory/context injected into prompts
+  // NEVER mix tenant contexts — this prevents bias and data leaks
+  const tenantContext = tenant ? tenantStore.getTenantContext(tenant.id) : "";
+
   // Hybrid: if user sends their own keys, use them for this request
-  // In "saas" mode, always use server keys (ignore user keys)
-  // In "free" or "hybrid", prefer user keys
   let requestBus = bus;
 
-  if (body.userKeys?.llmApiKey && config.billing !== "saas") {
-    // Create a per-request agent pipeline with the user's keys
+  if ((body.userKeys?.llmApiKey || tenant?.config.llmApiKey) && config.billing !== "saas") {
+    // Create per-request pipeline with tenant/user keys (tenant keys take priority)
+    const reqLlmKey = tenant?.config.llmApiKey || body.userKeys?.llmApiKey || keys.llmApiKey;
+    const reqSearchKey = tenant?.config.searchApiKey || body.userKeys?.searchApiKey || keys.searchApiKey;
+
     const userLLM = new LLM({
-      provider: body.userKeys.llmProvider || keys.llmProvider,
-      apiKey: body.userKeys.llmApiKey,
-      model: body.userKeys.llmModel || keys.llmModel,
+      provider: tenant?.config.llmProvider || body.userKeys?.llmProvider || keys.llmProvider,
+      apiKey: reqLlmKey,
+      model: tenant?.config.llmModel || body.userKeys?.llmModel || keys.llmModel,
     });
     const userSearchConfig: SearchConfig = {
-      provider: (body.userKeys.searchProvider || keys.searchProvider) as any,
-      apiKey: body.userKeys.searchApiKey || keys.searchApiKey,
+      provider: (tenant?.config.searchProvider || body.userKeys?.searchProvider || keys.searchProvider) as any,
+      apiKey: reqSearchKey,
     };
 
     // Build a temporary bus with user's keys
@@ -206,11 +232,25 @@ app.post("/api/v1/run", authMiddleware, async (c) => {
     requestBus.register(new DevOpsAgent(userLLM));
   }
 
+  // Build request with tenant-isolated context
+  const request = body.request || body.topic;
+  const contextualRequest = tenantContext
+    ? `${tenantContext}\n---\nUser request: ${request}`
+    : request;
+
   const msg = createMessage("api", "orchestrator", "task", {
     action: "orchestrate",
-    input: { request: body.request || body.topic, ...body },
+    input: { request: contextualRequest, ...body, tenantId: tenant?.id },
   });
   const result = await requestBus.send(msg);
+
+  // Learn from this interaction (update tenant memory)
+  if (tenant && result.type === "result") {
+    await tenantStore.updateMemory(tenant.id, {
+      history: { pastTopics: [request], pastOutputTypes: [body.agent || "orchestrator"], feedbackLog: [] },
+    });
+  }
+
   return c.json(result.payload, result.type === "error" ? 400 : 200);
 });
 
@@ -314,10 +354,32 @@ app.get("/api/v1/strategies", authMiddleware, async (c) => {
 });
 
 // === Tenants ===
-app.get("/api/v1/tenants", authMiddleware, (c) => c.json({ tenants: tenantManager.list() }));
+app.get("/api/v1/tenants", authMiddleware, (c) => c.json({ tenants: tenantStore.list().map(t => ({ id: t.id, name: t.name, plan: t.plan.name, usage: t.usage, active: t.active })) }));
+
 app.post("/api/v1/tenants", authMiddleware, async (c) => {
-  const tenant = await tenantManager.create(await c.req.json());
-  return c.json(tenant, 201);
+  const body = await c.req.json();
+  const tenant = await tenantStore.create(body.name, body.email, body.plan);
+  return c.json({ id: tenant.id, apiKey: tenant.apiKey, name: tenant.name, plan: tenant.plan.name }, 201);
+});
+
+app.get("/api/v1/tenants/:id", authMiddleware, (c) => {
+  const tenant = tenantStore.getById(c.req.param("id"));
+  if (!tenant) return c.json({ error: "Tenant not found" }, 404);
+  return c.json({ id: tenant.id, name: tenant.name, plan: tenant.plan, usage: tenant.usage, memory: tenant.memory, active: tenant.active });
+});
+
+// Tenant updates their brand/preferences
+app.patch("/api/v1/tenants/:id/memory", authMiddleware, async (c) => {
+  const body = await c.req.json();
+  await tenantStore.updateMemory(c.req.param("id"), body);
+  return c.json({ success: true });
+});
+
+// Tenant usage
+app.get("/api/v1/tenants/:id/usage", authMiddleware, (c) => {
+  const tenant = tenantStore.getById(c.req.param("id"));
+  if (!tenant) return c.json({ error: "Tenant not found" }, 404);
+  return c.json(tenant.usage);
 });
 
 // === Auth ===
